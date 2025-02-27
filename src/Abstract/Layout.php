@@ -1,6 +1,6 @@
 <?php
 
-namespace Core\Abstract;
+namespace NeoFramework\Core\Abstract;
 
 use Core\Functions;
 use Core\Template;

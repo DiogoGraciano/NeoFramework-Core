@@ -1,6 +1,6 @@
 <?php
 
-namespace Core\Interfaces;
+namespace NeoFramework\Core\Interfaces;
 
 use Core\Abstract\Controller;
 use Core\Response;

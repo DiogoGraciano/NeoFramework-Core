@@ -1,6 +1,6 @@
 <?php
 
-namespace Core;
+namespace NeoFramework\Core;
 
 use Core\Enums\FileStorageDisk;
 use Core\Enums\FileStorageType;

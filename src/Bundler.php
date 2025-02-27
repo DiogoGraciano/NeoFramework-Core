@@ -1,6 +1,6 @@
 <?php
 
-namespace Core;
+namespace NeoFramework\Core;
 
 use MatthiasMullie\Minify\CSS;
 use MatthiasMullie\Minify\JS;

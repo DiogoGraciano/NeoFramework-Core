@@ -1,6 +1,6 @@
 <?php
 
-namespace Core;
+namespace NeoFramework\Core;
 
 use DI\Container as DIContainer;
 use DI\ContainerBuilder;

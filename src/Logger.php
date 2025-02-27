@@ -1,5 +1,5 @@
 <?php
-namespace Core;
+namespace NeoFramework\Core;
 use Monolog\Level;
 use Monolog\Logger as L;
 use Monolog\Handler\StreamHandler;

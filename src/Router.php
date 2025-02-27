@@ -1,5 +1,5 @@
 <?php
-namespace Core;
+namespace NeoFramework\Core;
 
 use App\View\Layout\Error;
 use Core\Attributes\Route;

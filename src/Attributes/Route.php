@@ -1,6 +1,6 @@
 <?php
 
-namespace Core\Attributes;
+namespace NeoFramework\Core\Attributes;
 
 #[\Attribute(\Attribute::TARGET_METHOD)]
 final class Route

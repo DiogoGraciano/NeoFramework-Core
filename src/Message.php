@@ -1,6 +1,6 @@
 <?php
 
-namespace Core;
+namespace NeoFramework\Core;
 use Core\Abstract\Layout;
 use Core\Session;
 

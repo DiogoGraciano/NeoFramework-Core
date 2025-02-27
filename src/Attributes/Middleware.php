@@ -1,6 +1,6 @@
 <?php
 
-namespace Core\Attributes;
+namespace NeoFramework\Core\Attributes;
 
 use Core\Abstract\Controller;
 use Core\Interfaces\Middleware as InterfacesMiddleware;

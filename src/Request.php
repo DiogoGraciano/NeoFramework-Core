@@ -1,6 +1,6 @@
 <?php
 
-namespace Core;
+namespace NeoFramework\Core;
 
 final class Request
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Core\Enums;
+namespace NeoFramework\Core\Enums;
 
 enum fileStorageDisk
 {
