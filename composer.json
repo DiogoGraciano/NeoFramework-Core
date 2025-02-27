@@ -1,0 +1,19 @@
+{
+    "name": "diogodg/neoframework",
+    "description": "NeoFramework é um framework simples e facil de usar para php",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "NeoFramework\\Core\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Diogo Graciano",
+            "email": "138625607+DiogoGraciano@users.noreply.github.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {}
+}
