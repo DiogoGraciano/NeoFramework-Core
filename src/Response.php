@@ -120,7 +120,7 @@ final class Response
 
     public function addContent(object|string|array $content):self
     {
-        if(is_object($content) && is_subclass_of($content,"Core\Abstract\Layout")){
+        if(is_object($content) && is_subclass_of($content,"NeoFramework\Core\Abstract\Layout")){
             $this->content[] = $content->parse();
             return $this;
         }

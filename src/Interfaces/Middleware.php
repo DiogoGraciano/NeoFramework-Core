@@ -2,8 +2,8 @@
 
 namespace NeoFramework\Core\Interfaces;
 
-use Core\Abstract\Controller;
-use Core\Response;
+use NeoFramework\Core\Abstract\Controller;
+use NeoFramework\Core\Response;
 
 interface Middleware 
 {

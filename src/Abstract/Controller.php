@@ -1,10 +1,10 @@
 <?php
 namespace NeoFramework\Core\Abstract;
 
-use Core\Functions;
-use Core\Url;
-use Core\Request;
-use Core\Response;
+use NeoFramework\Core\Functions;
+use NeoFramework\Core\Url;
+use NeoFramework\Core\Request;
+use NeoFramework\Core\Response;
 
 abstract class Controller
 {

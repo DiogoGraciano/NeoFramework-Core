@@ -2,8 +2,8 @@
 
 namespace NeoFramework\Core;
 
-use Core\Enums\FileStorageDisk;
-use Core\Enums\FileStorageType;
+use NeoFramework\Core\Enums\FileStorageDisk;
+use NeoFramework\Core\Enums\FileStorageType;
 use Aws\S3\S3Client;
 use Exception;
 use League\Flysystem\AwsS3V3\AwsS3V3Adapter;

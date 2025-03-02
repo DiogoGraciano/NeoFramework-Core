@@ -2,8 +2,8 @@
 
 namespace NeoFramework\Core\Abstract;
 
-use Core\Functions;
-use Core\Template;
+use NeoFramework\Core\Functions;
+use NeoFramework\Core\Template;
 
 abstract class Layout{
 

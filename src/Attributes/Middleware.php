@@ -2,9 +2,9 @@
 
 namespace NeoFramework\Core\Attributes;
 
-use Core\Abstract\Controller;
-use Core\Interfaces\Middleware as InterfacesMiddleware;
-use Core\Response;
+use NeoFramework\Core\Abstract\Controller;
+use NeoFramework\Core\Interfaces\Middleware as InterfacesMiddleware;
+use NeoFramework\Core\Response;
 use SplQueue;
 
 #[\Attribute(\Attribute::TARGET_METHOD)]
@@ -17,7 +17,7 @@ final class Middleware
         $this->middleware = new SplQueue;
 
         foreach ($classes as $class){
-            if(is_subclass_of($class,"Core\Interfaces\Middleware")){
+            if(is_subclass_of($class,"NeoFramework\Core\Interfaces\Middleware")){
                 $this->add($class);
             }
         }

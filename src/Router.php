@@ -2,11 +2,11 @@
 namespace NeoFramework\Core;
 
 use App\View\Layout\Error;
-use Core\Attributes\Route;
+use NeoFramework\Core\Attributes\Route;
 use App\View\Layout\Head;
-use Core\Attributes\Middleware;
+use NeoFramework\Core\Attributes\Middleware;
 use DI\Container;
-use Core\Container as CoreContainer;
+use NeoFramework\Core\Container as CoreContainer;
 use Exception;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -96,7 +96,7 @@ final class Router{
         $controller = ucfirst($controller);
 
         foreach ($this->folders as $folder){
-            if(class_exists($folder."\\".$controller) && is_subclass_of($folder."\\".$controller,"Core\Abstract\Controller")){
+            if(class_exists($folder."\\".$controller) && is_subclass_of($folder."\\".$controller,"NeoFramework\Core\Abstract\Controller")){
                 $exists = true;
                 $this->namespace = $folder;
                 $this->controller = $controller; 
@@ -170,7 +170,7 @@ final class Router{
 
         $response = $controller->$methodName(...$parameters);
 
-        if(!is_a($response,"Core\Response"))
+        if(!is_a($response,"NeoFramework\Core\Response"))
             throw new Exception("O retorno de um metodo do controller deve ser a instância do do metodo Response");
 
         if($middlewareAttribute){

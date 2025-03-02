@@ -2,7 +2,7 @@
 
 namespace NeoFramework\Core;
 
-use Core\Logger;
+use NeoFramework\Core\Logger;
 use NumberFormatter;
 
 abstract class Functions

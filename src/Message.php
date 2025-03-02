@@ -1,8 +1,8 @@
 <?php
 
 namespace NeoFramework\Core;
-use Core\Abstract\Layout;
-use Core\Session;
+use NeoFramework\Core\Abstract\Layout;
+use NeoFramework\Core\Session;
 
 class Message extends layout{
 
