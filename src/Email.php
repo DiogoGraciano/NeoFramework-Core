@@ -1,6 +1,6 @@
 <?php 
 
-namespace App\Helpers;
+namespace NeoFramework\Core;
 
 use PHPMailer\PHPMailer\PHPMailer;
 
