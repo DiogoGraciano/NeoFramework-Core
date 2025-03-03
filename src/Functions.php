@@ -17,7 +17,7 @@ abstract class Functions
      */
     public static function getRoot(): string
     {
-        return dirname(__DIR__)."/";
+        return dirname(dirname(dirname(dirname(__DIR__))))."/";
     }
     
     /**
