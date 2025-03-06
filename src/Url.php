@@ -35,19 +35,30 @@ final class Url
         return $result ? $result : [];
     }
 
+    public static function getControlerByUri(){
+
+        $uri = self::getUriPath();
+
+        if($uri == "/"){
+            return "inicio";
+        }
+
+        if(substr_count($uri,'/') > 1){
+            list($controller) = array_values(array_filter(explode('/',$uri)));
+            return (($controller));
+        }
+        return ((ltrim($uri,"/")));
+    }
+
     public static function getUrlBase(): string
     {
-        // Garante que o protocolo seja detectado corretamente, incluindo o suporte ao proxy reverso
         $https = $_SERVER['HTTPS'] ?? '';
         $isSecure = (!empty($https) && $https !== 'off') || ($_SERVER['HTTP_X_FORWARDED_PORT'] ?? false) == 443 || ($_SERVER['SERVER_PORT'] ?? false) == 443;
 
-        // Define o protocolo apropriado
         $protocol = $isSecure ? 'https' : 'http';
 
-        // Garante que HTTP_HOST esteja definido para evitar erros
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-
-        // Retorna a URL base corretamente formatada
+        
         return rtrim($protocol . "://" . $host, '/') . '/';
     }
 
