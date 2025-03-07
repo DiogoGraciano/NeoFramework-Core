@@ -40,7 +40,7 @@ final class Url
         $uri = self::getUriPath();
 
         if($uri == "/"){
-            return "inicio";
+            return "home";
         }
 
         if(substr_count($uri,'/') > 1){
