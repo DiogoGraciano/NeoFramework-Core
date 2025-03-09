@@ -24,10 +24,14 @@ abstract class Controller
 
     public function setResquest(Request $request){
         $this->request = $request;
+
+        return $this;
     }
 
     public function setResponse(Response $response){
         $this->response = $response;
+
+        return $this;
     }
 
     public function getResponse(){
