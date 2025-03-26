@@ -1,9 +1,7 @@
 <?php
 namespace NeoFramework\Core;
 
-use App\View\Layout\Error;
 use NeoFramework\Core\Attributes\Route;
-use App\View\Layout\Head;
 use NeoFramework\Core\Attributes\Middleware;
 use DI\Container;
 use NeoFramework\Core\Container as CoreContainer;
