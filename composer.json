@@ -22,6 +22,9 @@
         "php-di/php-di": "^7.0",
         "monolog/monolog": "^3.8",
         "matthiasmullie/minify": "^1.3",
-        "filp/whoops": "^2.17"
+        "filp/whoops": "^2.17",
+        "nesbot/carbon": "^3.8",
+        "guzzlehttp/guzzle": "^7.9",
+        "respect/validation": "^2.4"
     }
 }
