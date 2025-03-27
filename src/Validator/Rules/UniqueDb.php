@@ -17,6 +17,6 @@ class UniqueDb extends Simple
 
     public function isValid(mixed $input): bool
     {
-        return $this->model->get($input,$this->field)->{$this->field} != null;
+        return $this->model->get($input,$this->field)->{$this->field} == null;
     }
 }
