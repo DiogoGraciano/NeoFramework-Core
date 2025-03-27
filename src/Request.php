@@ -82,11 +82,15 @@ final class Request
             return null;
     }
 
-    public function file(string $var)
+    public function file(string $var):SplFileObject|array|null
     {
-        if (isset($this->files[$var]))
-            return $this->processFiles($this->files[$var]);
-        else
+        if (isset($this->files[$var])){
+            $file = $this->processFiles($this->files[$var]);
+            if(empty($file))
+                return null;
+
+            return count($file) == 1?$file[0]:$file;
+        }else
             return null;
     }
 
@@ -112,7 +116,7 @@ final class Request
 
     public function filesArray()
     {
-        return $this->processFiles($this->files);
+        return $this->files;
     }
 
     public function getBody(): string

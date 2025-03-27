@@ -8,44 +8,50 @@ use Respect\Validation\Validator as v;
 
 class Validator
 {
-    public static function make(array $fields, array $rules): v
+    private bool $hasErrors = false;
+    private array $errors = [];
+
+    public function make(array $fields, array $rules,array $messages = []):self
     {
         $validator = new v;
 
         foreach ($rules as $field => $fieldRules) {
-            if (!is_array($fieldRules)) {
-                throw new InvalidArgumentException("Rules for the field '{$field}' must be an array.");
+            if (!is_object($fieldRules) && $fieldRules::class != "Respect\Validation\Validator") {
+                throw new InvalidArgumentException("Rules for the field '{$field}' must be an instace of Respect\Validation\Validator.");
             }
 
-            $fieldValidators = [];
-            foreach ($fieldRules as $rule) {
-                if (is_array($rule)) {
-                    if (count($rule) < 1) {
-                        throw new InvalidArgumentException("Rule for '{$field}' must have at least the rule name as the first element.");
-                    }
-                    $methodName = $rule[0];
-                    $params = array_slice($rule, 1);
-                } else {
-                    $methodName = $rule;
-                    $params = [];
-                }
-
-                if (!method_exists(v::class, $methodName)) {
-                    throw new InvalidArgumentException("Rule '{$methodName}' does not exist for the field '{$field}'.");
-                }
-
-                $fieldValidators[] = v::$methodName(...$params);
-            }
-            $validator = $validator->key($field, v::allOf(...$fieldValidators));
+            $validator = $validator->key($field, $fieldRules);
         }
 
         try {
             $validator->assert($fields);
         } catch (NestedValidationException $exception) {
-            $erros = $exception->findMessages($messages);
+            $errorsOrigin = $exception->getMessages();
+            $fields = array_keys($errorsOrigin);
+            
+            $errors = [];
+            foreach ($fields as $field){
+                if(isset($messages[$field])){
+                    $errors[$field] = $messages[$field];
+                }
+                else{
+                    $errors[$field] = $errorsOrigin[$field];
+                }
+                    
+            }
+
+            $this->hasErrors = true;
+            $this->errors = $errors;
         }
 
+        return $this;
+    }
 
-        return $validator;
+    public function hasError(){
+        return $this->hasErrors;
+    }
+
+    public function getErrors(){
+        return $this->errors;
     }
 }
