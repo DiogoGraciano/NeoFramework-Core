@@ -2,91 +2,60 @@
 
 namespace NeoFramework\Core;
 
-final class Cache {
+use Exception;
+use Symfony\Component\Cache\Adapter\FilesystemTagAwareAdapter;
+use Symfony\Component\Cache\Adapter\MemcachedAdapter;
+use Symfony\Component\Cache\Adapter\RedisAdapter;
+use Symfony\Component\Cache\Adapter\TagAwareAdapter;
 
-    private const PATH = "Cache/"; 
-    private const CACHE_EXTENSION = ".cache"; 
-	private const DEFAULT_CACHE_EXPIRATION = "4";
-
-    private function __construct(){}
-
-    public static function getCache($cache_id)
+final class Cache
+{
+    private static function load(): TagAwareAdapter
     {
-        $cache_file = self::getCachePath().$cache_id.self::CACHE_EXTENSION; 
-
-        if (file_exists($cache_file)){
-            $content = file_get_contents($cache_file); 
-            $content = unserialize($content); 
-            return $content; 
-        } else
-            return false; 
-    }
-
-    public static function setCache($cache_id, $body) 
-    {
-        $cache_file = self::getCachePath().$cache_id.self::CACHE_EXTENSION; 
-
-        $body = serialize($body); 
-
-        try {
-            $file_opened = fopen($cache_file, 'w'); 
-            fwrite($file_opened, $body);
-            fclose($file_opened); 	
-        } catch (\Exception $e) {
-            return false; 
+        if (!isset($_ENV["CACHE_ADAPTER"])) {
+            throw new Exception("CACHE_ADAPTER not found in the .env file, configure the cache adapter in the .env file");
         }
 
-        return true; 
+        $adapter = match ($_ENV["CACHE_ADAPTER"]) {
+            'memcached' => self::createMemcachedAdapter(),
+            'redis' => self::createRedisAdapter(),
+            default => new FilesystemTagAwareAdapter(directory: Functions::getRoot() . "Cache")
+        };
+
+        return new TagAwareAdapter($adapter);
     }
 
-    private static function getCachePath()
+    private static function createMemcachedAdapter(): MemcachedAdapter
     {
-        $dir = new \DirectoryIterator(Functions::getRoot().self::PATH);
-        $current_dir = ""; 
-
-        foreach($dir as $file) {
-            if (!$dir->isDot() && $dir->isDir()) {
-                
-                $dir_name = $file->getFilename(); 
-
-                $time = explode('_', $dir_name); 
-                $time[1] = str_replace('-', ':', $time[1]); 
-                $limit_datetime = implode(' ', $time); 
-                
-                $data1 = $limit_datetime;
-                $data2 = date('Y-m-d H:i:s');
-
-                $unix_data1 = strtotime($data1);
-                $unix_data2 = strtotime($data2);
-
-                $intervalo = ($unix_data2 - $unix_data1) / 3600;
-
-                if (intval($intervalo) > self::DEFAULT_CACHE_EXPIRATION) {
-                    self::removeDirectory(Functions::getRoot().self::PATH.$dir_name); 
-                } else {
-                    $current_dir = Functions::getRoot().self::PATH.$dir_name."/"; 
-                }
-            }
+        if (!isset($_ENV["MEMCACHED_CONNECTION_URL"])) {
+            throw new Exception("MEMCACHED_CONNECTION_URL not found in the .env file, configure memcached in the .env file");
         }
 
-        if (empty($current_dir)) {
-            $t = date('Y-m-d_H-i-s'); 
-            mkdir(Functions::getRoot().self::PATH.$t."/", 0777);
-            $current_dir = Functions::getRoot().self::PATH.$t."/"; 
-        }
-
-        return $current_dir; 	        	
+        $client = MemcachedAdapter::createConnection(
+            $_ENV["MEMCACHED_CONNECTION_URL"]
+        );
+        return new MemcachedAdapter($client);
     }
-	
-    private static function removeDirectory($path) 
+
+    private static function createRedisAdapter(): RedisAdapter
     {
-        $files = glob($path . '/*');
-        foreach ($files as $file) {
-            is_dir($file) ? self::removeDirectory($file) : unlink($file);
+        if (!isset($_ENV["REDIS_CONNECTION_URL"])) {
+            throw new Exception("REDIS_CONNECTION_URL not found in the .env file, configure redis in the .env file");
         }
-    
-        rmdir($path);
-        return;
+
+        $client = RedisAdapter::createConnection(
+            $_ENV["REDIS_CONNECTION_URL"]
+        );
+        return new RedisAdapter($client);
     }
 
+    public function __call($name, $arguments): mixed
+    {
+        return self::load()->$name(...$arguments);
+    }
+
+    public static function __callStatic($name, $arguments): mixed
+    {
+        return self::load()->$name(...$arguments);
+    }
 }
