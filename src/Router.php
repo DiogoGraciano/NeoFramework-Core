@@ -159,8 +159,15 @@ final class Router{
         Session::set("controller_namespace",$this->namespace); 
         Session::set("controller",$controller::class);
 
-        $controller->setResquest(new Request);
-        $controller->setResponse(new Response);
+        $response = new Response;
+        $request = new Request;
+
+        if($routeAttribute->getValidCsrf() && $request->getCsrfToken() === Session::getCsrfToken()){
+            $response->setCode(403)->send();
+        }
+
+        $controller->setResquest($request);
+        $controller->setResponse($response);
 
         if($middlewareAttribute){
             $controller = $middlewareAttribute->handleBefore($controller);

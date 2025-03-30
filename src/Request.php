@@ -50,26 +50,26 @@ final class Request
         return $_SERVER['REQUEST_METHOD'];
     }
 
-    public function get(string $var)
+    public function get(string $var,bool $sanitazed = true)
     {
         if (isset($this->get[$var]))
-            return $this->get[$var];
+            return $sanitazed?$this->sanitizeData($this->get[$var]):$this->get[$var];
         else
             return null;
     }
 
-    public function post(string $var)
+    public function post(string $var,bool $sanitazed = true)
     {
         if (isset($this->post[$var]))
-            return $this->post[$var];
+            return $sanitazed?$this->sanitizeData($this->post[$var]):$this->post[$var];
         else
             return null;
     }
 
-    public function cookie(string $var)
+    public function cookie(string $var,bool $sanitazed = true)
     {
         if (isset($this->cookie[$var]))
-            return $this->cookie[$var];
+            return $sanitazed?$this->sanitizeData($this->cookie[$var]):$this->cookie[$var];
         else
             return null;
     }
@@ -94,19 +94,24 @@ final class Request
             return null;
     }
 
-    public function getArray()
+    public function getCsrfToken():null|string
     {
-        return $this->get;
+        return $this->post("CSRF_TOKEN") ?? $this->get("CSRF_TOKEN") ?? $this->server("X-CSRF-TOKEN");
     }
 
-    public function postArray()
+    public function getArray(bool $sanitazed = true)
     {
-        return $this->post;
+        return $sanitazed?$this->sanitizeData($this->get):$this->get;
     }
 
-    public function cookieArray()
+    public function postArray(bool $sanitazed = true)
     {
-        return $this->cookie;
+        return $sanitazed?$this->sanitizeData($this->post):$this->post;
+    }
+
+    public function cookieArray(bool $sanitazed = true)
+    {
+        return $sanitazed?$this->sanitizeData($this->cookie):$this->cookie;
     }
 
     public function serverArray()
@@ -171,6 +176,21 @@ final class Request
         }
 
         return $splFiles;
+    }
+
+    private function sanitizeData($data)
+    {
+        if (is_array($data)) {
+            $sanitized = [];
+            foreach ($data as $key => $value) {
+                $sanitized[$key] = $this->sanitizeData($value);
+            }
+            return $sanitized;
+        } elseif (is_string($data)) {
+            return htmlspecialchars($data, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        } else {
+            return $data;
+        }
     }
 
     private function isJsonContentType(): bool

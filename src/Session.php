@@ -4,13 +4,8 @@ namespace NeoFramework\Core;
 
 final class Session
 {
-    /**
-     * Inicia uma sessão.
-     *
-     * @param string $nome Nome da variável de sessão.
-     * @param mixed $valor Valor da variável de sessão.
-     */
-    public static function start(?string $cacheExpire = null, ?string $cacheLimiter = null){
+    public static function start(?string $cacheExpire = null, ?string $cacheLimiter = null):void
+    {
         if (session_status() === PHP_SESSION_NONE) {
 
             if ($cacheLimiter !== null) {
@@ -26,36 +21,38 @@ final class Session
             ]);
 
             session_start();
+
+            self::generateCsrfToken();
         }
     }
 
-    public static function getId(){
+    private static function generateCsrfToken():void
+    {
+        self::set("CSRF_TOKEN",md5(uniqid(rand(), true)));
+    }
+
+    public static function getCsrfToken():string
+    {
+        return self::get("CSRF_TOKEN");
+    }
+
+    public static function getId():string
+    {
         return \session_id();
     }
 
-    public static function destroy(){
+    public static function destroy():bool
+    {
         return session_destroy();
     }
 
-    /**
-     * Define uma variável de sessão.
-     *
-     * @param string $nome Nome da variável de sessão.
-     * @param mixed $valor Valor da variável de sessão.
-     */
     public static function set(string $nome, $valor):void
     {
-        $_SESSION["_".$nome] = $valor;
+        $_SESSION["neof_".$nome] = $valor;
     }
 
-    /**
-     * Obtém o valor de uma variável de sessão.
-     *
-     * @param string $nome Nome da variável de sessão.
-     * @return mixed Valor da variável de sessão ou uma string vazia se não existir.
-     */
     public static function get(string $nome):mixed
     {
-        return array_key_exists("_".$nome, $_SESSION) ? $_SESSION["_".$nome] : null;
+        return array_key_exists("neof_".$nome, $_SESSION) ? $_SESSION["neof_".$nome] : null;
     }
 }
