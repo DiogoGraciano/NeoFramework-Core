@@ -527,6 +527,8 @@ PATH_CONTROLLERS=App/Controllers
 ## Security
 
 - Protection against SQL Injection
+- Protection against CSRF 
+- Protection against XSS
 - Data validation
 - Secure session management
 - Encryption of sensitive data
