@@ -171,7 +171,7 @@ final class Request
         $splFiles = [];
         foreach ($fileList as $fileInfo) {
             if ($fileInfo['error'] === UPLOAD_ERR_OK) {
-                $splFiles[] = new SplFileObject($fileInfo['tmp_name']);
+                $splFiles[] = new File($fileInfo['tmp_name']);
             }
         }
 
