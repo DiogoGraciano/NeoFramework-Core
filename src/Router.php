@@ -15,6 +15,8 @@ final class Router{
 
     private array $folders = [];
 
+    private array $routesRewrite = [];
+
     private string $namespace;
 
     private string $controller;
@@ -26,6 +28,13 @@ final class Router{
         $this->uri = Url::getUriPath();
         $this->container = (new CoreContainer())->load();
         $this->getFolders();
+        $this->getRouteRewrite();
+    }
+
+    private function getRouteRewrite(){
+        if(file_exists(Functions::getRoot()."Config/route_rewrite.config.php")){
+            $this->routesRewrite = include_once Functions::getRoot()."Config/route_rewrite.config.php";
+        }
     }
 
     private function getFolders(){
@@ -89,18 +98,22 @@ final class Router{
     }
 
     private function controllerExist($controller){
-        $exists = false;
-
         $controller = ucfirst($controller);
+
+        if(in_array($controller,$this->routesRewrite) && class_exists($this->routesRewrite[$controller])){
+            $this->namespace =  (new \ReflectionClass($this->routesRewrite[$controller]))->getNamespaceName();
+            $this->controller = $controller; 
+            return true;
+        }
 
         foreach ($this->folders as $folder){
             if(class_exists($folder."\\".$controller) && is_subclass_of($folder."\\".$controller,"NeoFramework\Core\Abstract\Controller")){
-                $exists = true;
                 $this->namespace = $folder;
                 $this->controller = $controller; 
+                return true;
             }
         }
-        return $exists;
+        return false;
     }
     
     private function instatiateController(){
@@ -162,7 +175,7 @@ final class Router{
         $response = new Response;
         $request = new Request;
 
-        if($routeAttribute->getValidCsrf() && $request->getCsrfToken() === Session::getCsrfToken()){
+        if(!$controller::validCsrfToken && $routeAttribute->getValidCsrf() && $request->getCsrfToken() === Session::getCsrfToken()){
             $response->setCode(403)->send();
         }
 

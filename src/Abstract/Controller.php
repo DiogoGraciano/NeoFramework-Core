@@ -16,6 +16,8 @@ abstract class Controller
 
     protected Response $response;
 
+    const validCsrfToken = true;
+
     public function __construct()
     {
         $this->urlQuery = Url::getUriQueryArray();

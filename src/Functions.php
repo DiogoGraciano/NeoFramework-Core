@@ -695,7 +695,7 @@ public static function validPhone($telefone):bool
     }
 
 
-    public static function slug($text){
+    public static function slug(string $text){
 
         $replace = [
             '<' => '', '>' => '', '-' => ' ', '&' => '',
