@@ -5,5 +5,6 @@ namespace NeoFramework\Core\Enums;
 enum fileStorageType
 {
     case DOCUMENT;
-    case IMAGEM;
+    case IMAGE;
+    case ANY;
 }

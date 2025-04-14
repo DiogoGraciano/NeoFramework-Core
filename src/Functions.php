@@ -1,8 +1,6 @@
 <?php
 
 namespace NeoFramework\Core;
-
-use NeoFramework\Core\Logger;
 use NumberFormatter;
 
 abstract class Functions
@@ -10,181 +8,195 @@ abstract class Functions
     private function __construct()
     {
     }
+
     /**
-     * Retorna o diretório raiz do servidor
+     * Returns the root directory of the server
      *
-     * @return string O diretório raiz do servidor
+     * @return string The root directory of the server
      */
     public static function getRoot(): string
     {
         return dirname(dirname(dirname(dirname(__DIR__))))."/";
     }
-    
+
     /**
-     * Decodifica uma string UTF-8 codificada para URL
+     * Decodes a URL-encoded UTF-8 string
      *
-     * @param string $str A string codificada para URL
-     * @return string A string decodificada
+     * @param string $str The URL-encoded string
+     * @return string The decoded string
      */
-    public static function utf8_urldecode(string $str):string
+    public static function utf8UrlDecode(string $str): string
     {
-        return mb_convert_encoding(preg_replace("/%u([0-9a-f]{3,4})/i", "&#x\\1;", urldecode($str)),'UTF-8');
-    }
-    
-    /**
-     * Remove todos os caracteres não numéricos de uma string
-     *
-     * @param string $value A string a ser filtrada
-     * @return string A string contendo apenas números
-     */
-    public static function onlynumber(string $value):string
-    {
-        $value = preg_replace("/[^0-9]/","", $value);
-        return $value;
+        return mb_convert_encoding(preg_replace("/%u([0-9a-f]{3,4})/i", "&#x\\1;", urldecode($str)), 'UTF-8');
     }
 
     /**
-     * Converte uma string para o formato de data e hora do banco de dados
+     * Removes all non-numeric characters from a string
      *
-     * @param string $string A string contendo a data e hora
-     * @return string|bool A string formatada ou false se falhar
+     * @param string $value The string to be filtered
+     * @return string The string containing only numbers
      */
-    public static function dateTimeBd(null|string $string):string|bool
+    public static function onlyNumber(string $value): string
     {
-        if(!$string){
+        return preg_replace("/[^0-9]/", "", $value);
+    }
+
+    /**
+     * Converts a string to the database date and time format
+     *
+     * @param string|null $string The date and time string
+     * @return string|bool The formatted string or false if it fails
+     */
+    public static function dateTimeDB(?string $string): string|bool
+    {
+        if (!$string) {
             return false;
         }
 
-        $string = str_replace("/","-",$string);
+        $string = str_replace("/", "-", $string);
         $datetime = new \DateTimeImmutable($string);
-        if ($datetime !== false)
+        if ($datetime !== false) {
             return $datetime->format('Y-m-d H:i:s');
+        }
 
         return false;
     }
 
     /**
-     * Converte uma string para o formato de data e hora BR
+     * Converts a string to Brazilian date and time format
      *
-     * @param string $string A string contendo a data e hora
-     * @return string|bool A string formatada ou false se falhar
+     * @param string $string The date and time string
+     * @return string|bool The formatted string or false if it fails
      */
-    public static function dateTimeBr(string $string):string|bool
+    public static function dateTimeBR(string $string): string|bool
     {
-        if(!$string){
+        if (!$string) {
             return false;
         }
-        
-        $string = str_replace("/","-",$string);
+
+        $string = str_replace("/", "-", $string);
         $datetime = new \DateTimeImmutable($string);
-        if ($datetime !== false)
+        if ($datetime !== false) {
             return $datetime->format('d/m/Y H:i:s');
+        }
 
         return false;
     }
 
     /**
-     * Validada se uma cor é valida
+     * Validates if a color is valid
      *
-     * @param string $string A string contendo a data
-     * @return string|bool A string formatada ou false se falhar
+     * @param string $color The color string
+     * @return string|bool The color string if valid, false otherwise
      */
-    public static function validColor(string $cor):string|bool
+    public static function validColor(string $color): string|bool
     {
-        // Expressão regular para verificar cor hexadecimal
-        $padrao_hex = '/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/';
-        
-        // Expressão regular para verificar cor RGB
-        $padrao_rgb = '/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/';
-        
-        // Verificar se a cor é hexadecimal ou RGB
-        if (preg_match($padrao_hex, $cor) || preg_match($padrao_rgb, $cor)) {
-            return $cor;
+        $hexPattern = '/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/';
+        $rgbPattern = '/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/';
+
+        if (preg_match($hexPattern, $color) || preg_match($rgbPattern, $color)) {
+            return $color;
         } else {
             return false;
         }
     }
 
     /**
-     * Converte uma string para o formato de data do banco de dados
+     * Converts a string to the database date format
      *
-     * @param string $string A string contendo a data
-     * @return string|bool A string formatada ou false se falhar
+     * @param string $string The date string
+     * @return string|bool The formatted string or false if it fails
      */
-    public static function dateBd(string $string):string|bool
+    public static function dateDB(string $string): string|bool
     {
         $datetime = new \DateTimeImmutable($string);
-        if ($datetime !== false)
+        if ($datetime !== false) {
             return $datetime->format('Y-m-d');
+        }
 
         return false;
-    }
-
-    public static function validBase64(string $s)
-    {
-          return (bool) preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $s);
-    }
-
-     /**
-     * Converte uma string para o formato de data BR
-     *
-     * @param string $string A string contendo a data
-     * @return string|bool A string formatada ou false se falhar
-     */
-    public static function dateBr(string $string):string|bool
-    {
-        $datetime = new \DateTimeImmutable($string);
-        if ($datetime !== false)
-            return $datetime->format('d/m/Y');
-
-        return false;
-    }
-
-    public static function validCpfCnpj($cpf_cnpj):bool
-    {
-        $cpf_cnpj = preg_replace('/[^0-9]/', '', (string)$cpf_cnpj);
-
-        if (strlen($cpf_cnpj) == 14)
-            return self::validCnpj($cpf_cnpj);
-        elseif(strlen($cpf_cnpj) == 11)
-            return self::validCpf($cpf_cnpj);
-        else 
-            return false;
     }
 
     /**
-     * Valida se o cnpj é valido
+     * Validates if a Base64 string is valid
      *
-     * @param string $cnpj A string contendo a data
-     * @return bool Se for validado true senão fals
-    */
-    public static function validCnpj($cnpj):bool
+     * @param string $s The Base64 string
+     * @return bool Whether the string is valid
+     */
+    public static function validBase64(string $s): bool
+    {
+        return (bool) preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $s);
+    }
+
+    /**
+     * Converts a string to Brazilian date format
+     *
+     * @param string $string The date string
+     * @return string|bool The formatted string or false if it fails
+     */
+    public static function dateBR(string $string): string|bool
+    {
+        $datetime = new \DateTimeImmutable($string);
+        if ($datetime !== false) {
+            return $datetime->format('d/m/Y');
+        }
+
+        return false;
+    }
+
+    /**
+     * Validates if a CPF or CNPJ number is valid
+     *
+     * @param string|int $cpf_cnpj The CPF or CNPJ
+     * @return bool Whether it is valid
+     */
+    public static function validCpfCnpj($cpf_cnpj): bool
+    {
+        $cpf_cnpj = preg_replace('/[^0-9]/', '', (string)$cpf_cnpj);
+
+        if (strlen($cpf_cnpj) == 14) {
+            return self::validCnpj($cpf_cnpj);
+        } elseif (strlen($cpf_cnpj) == 11) {
+            return self::validCpf($cpf_cnpj);
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Validates if a CNPJ is valid
+     *
+     * @param string $cnpj The CNPJ
+     * @return bool Whether it is valid
+     */
+    public static function validCnpj($cnpj): bool
     {
         $cnpj = preg_replace('/[^0-9]/', '', (string)$cnpj);
 
-        // Valida tamanho
-        if (strlen($cnpj) != 14)
+        // Validates length
+        if (strlen($cnpj) != 14) {
             return false;
+        }
 
-        // Verifica se todos os digitos são iguais
-        if (preg_match('/(\d)\1{13}/', $cnpj))
-            return false;	
+        // Checks if all digits are the same
+        if (preg_match('/(\d)\1{13}/', $cnpj)) {
+            return false;
+        }
 
-        // Valida primeiro dígito verificador
-        for ($i = 0, $j = 5, $soma = 0; $i < 12; $i++)
-        {
+        // Validate the first verification digit
+        for ($i = 0, $j = 5, $soma = 0; $i < 12; $i++) {
             $soma += $cnpj[$i] * $j;
             $j = ($j == 2) ? 9 : $j - 1;
         }
 
         $resto = $soma % 11;
 
-        if ($cnpj[12] != ($resto < 2 ? 0 : 11 - $resto))
+        if ($cnpj[12] != ($resto < 2 ? 0 : 11 - $resto)) {
             return false;
+        }
 
-        // Valida segundo dígito verificador
-        for ($i = 0, $j = 6, $soma = 0; $i < 13; $i++)
-        {
+        // Validate the second verification digit
+        for ($i = 0, $j = 6, $soma = 0; $i < 13; $i++) {
             $soma += $cnpj[$i] * $j;
             $j = ($j == 2) ? 9 : $j - 1;
         }
@@ -195,27 +207,27 @@ abstract class Functions
     }
 
     /**
-     * Valida se o cpf é valido
+     * Validates if a CPF is valid
      *
-     * @param string $cnpj A string contendo a data
-     * @return bool Se for validado true senão false
-    */
-    public static function validCpf($cpf):bool
+     * @param string $cpf The CPF
+     * @return bool Whether it is valid
+     */
+    public static function validCpf($cpf): bool
     {
-        // Extrai somente os números
-        $cpf = preg_replace( '/[^0-9]/', '', (string)$cpf);
-        
-        // Verifica se foi informado todos os digitos corretamente
+        // Extracts only the numbers
+        $cpf = preg_replace('/[^0-9]/', '', (string)$cpf);
+
+        // Checks if all digits are provided correctly
         if (strlen($cpf) != 11) {
             return false;
         }
 
-        // Verifica se foi informada uma sequência de digitos repetidos. Ex: 111.111.111-11
+        // Checks if the sequence is composed of repeated digits
         if (preg_match('/(\d)\1{10}/', $cpf)) {
             return false;
         }
 
-        // Faz o calculo para validar o CPF
+        // Performs calculation to validate CPF
         for ($t = 9; $t < 11; $t++) {
             for ($d = 0, $c = 0; $c < $t; $c++) {
                 $d += $cpf[$c] * (($t + 1) - $c);
@@ -230,14 +242,14 @@ abstract class Functions
     }
 
     /**
-     * Formata um CNPJ ou CPF
+     * Formats a CNPJ or CPF
      *
-     * @param string $value O valor do CNPJ ou CPF
-     * @return string O valor formatado
+     * @param string|null $value The CNPJ or CPF value
+     * @return string|bool The formatted value or false if invalid
      */
-    public static function formatCnpjCpf(?string $value):string|bool
+    public static function formatCpfCnpj(?string $value): string|bool
     {
-        if(!$value){
+        if (!$value) {
             return false;
         }
 
@@ -245,406 +257,423 @@ abstract class Functions
         $cnpj_cpf = preg_replace("/\D/", '', $value);
 
         if (strlen($cnpj_cpf) === $CPF_LENGTH) {
-            return Functions::mask($cnpj_cpf, '###.###.###-##');
-        } 
-        
-        return Functions::mask($cnpj_cpf, '##.###.###/####-##');
+            return self::applyMask($cnpj_cpf, '###.###.###-##');
+        } else {
+            return self::applyMask($cnpj_cpf, '##.###.###/####-##');
+        }
     }
 
     /**
-     * Aplica uma máscara a uma string
+     * Applies a mask to a string
      *
-     * @param string $val A string original
-     * @param string $mask A máscara a ser aplicada
-     * @return string A string com a máscara aplicada
+     * @param string $val The original string
+     * @param string $mask The mask to apply
+     * @return string The masked string
      */
-    public static function mask(string $val,string $mask):string
+    public static function applyMask(string $val, string $mask): string
     {
-        $maskared = '';
+        $masked = '';
         $k = 0;
-        for($i = 0; $i<=strlen($mask)-1; $i++) {
-            if($mask[$i] == '#') {
-                if(isset($val[$k])) $maskared .= $val[$k++];
+        for ($i = 0; $i <= strlen($mask) - 1; $i++) {
+            if ($mask[$i] == '#') {
+                if (isset($val[$k])) {
+                    $masked .= $val[$k++];
+                }
             } else {
-                if(isset($mask[$i])) $maskared .= $mask[$i];
+                if (isset($mask[$i])) {
+                    $masked .= $mask[$i];
+                }
             }
         }
-        return $maskared;
+        return $masked;
     }
 
-
     /**
-     * Valida se uma email é valido
+     * Validates if an email is valid
      *
-     * @param string $email A string com o email
-     * @return bool se é valido
-    */
-    public static function validEmail($email):bool
+     * @param string $email The email string
+     * @return bool Whether it is valid
+     */
+    public static function validEmail($email): bool
     {
         return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
     }
 
+
     /**
-     * Valida se os dias são validos
+     * Validates if a time is valid
      *
-     * @param string $dias A string com os dias
-     * @return bool se é valido
-    */
-    public static function validarDiasSemana($dias_semana):bool
+     * @param string $time The time string
+     * @return bool Whether it is valid
+     */
+    public static function validateTime(string $time): bool
     {
-        
-        // Dividir a lista em dias individuais
-        $dias = explode(",", $dias_semana);
-        
-        if(count($dias) <= 7){
-            // Verificar cada dia individualmente
-            foreach ($dias as $dia) {
-                $dia = trim($dia);
-                if (!in_array($dia, ["","dom", "seg", "ter", "qua", "qui", "sex", "sab"])) {
-                    return false; // Dia inválido encontrado
-                }
-            }
-            
-            return true; // Todos os dias são válidos
+        // Regular expression to validate HH:MM:SS format
+        $timePattern = '/^([01]?[0-9]|2[0-3]):([0-5]?[0-9]):([0-5]?[0-9])$/';
+
+        // Check if the time matches the pattern
+        if (preg_match($timePattern, $time, $matches)) {
+            $hour = intval($matches[1]);
+            $minute = intval($matches[2]);
+            $second = intval($matches[3]);
+
+            return $hour >= 0 && $hour <= 23 && $minute >= 0 && $minute <= 59 && $second >= 0 && $second <= 59;
         }
 
         return false;
     }
 
     /**
-     * Valida se uma horario é valido
+     * Formats a time string to the HH:MM:SS or HH:MM format
      *
-     * @param string $horario A string com o horario
-     * @return bool se é valido
-    */
-    public static function validaHour(string $horario):bool
+     * @param string $time The time string to format
+     * @return string The formatted time string
+     */
+    public static function formatTimeString(string $time): string
     {
-        // Expressão regular para validar o formato HH:MM:SS
-        $padrao_horario = '/^([01]?[0-9]|2[0-3]):([0-5]?[0-9]):([0-5]?[0-9])$/';
-        
-        // Verificar se o horário corresponde ao padrão
-        if (preg_match($padrao_horario, $horario, $matches)) {
-            // Verificar se os valores de hora, minuto e segundo estão dentro dos limites corretos
-            $hora = intval($matches[1]);
-            $minuto = intval($matches[2]);
-            $segundo = intval($matches[3]);
-            
-            if ($hora >= 0 && $hora <= 23 && $minuto >= 0 && $minuto <= 59 && $segundo >= 0 && $segundo <= 59) {
-                return true;
-            }
+        $count = substr_count($time, ":");
+
+        if ($count > 1) {
+            return $time;
+        } elseif ($count == 1) {
+            return $time . ":00";
+        } else {
+            return $time . ":00:00";
         }
-        
-        return false;
     }
 
     /**
-     * Formata uma string de tempo para o formato HH:MM:SS ou HH:MM
+     * Multiplies a time by a given quantity
      *
-     * @param string $time A string de tempo a ser formatada
-     * @return string A string de tempo formatada
+     * @param string $time The time string to multiply
+     * @param int $quantity The quantity to multiply the time by
+     * @return string The new time string in HH:MM:SS format
      */
-    public static function formatTime(string $time):string
+    public static function multiplyTime(string $time, int $quantity): string
     {
-        if ($tamanho = substr_count($time,":")){
-            if ($tamanho == 2){
+        list($hours, $minutes, $seconds) = explode(':', $time);
+
+        // Convert everything to seconds
+        $totalSeconds = $hours * 3600 + $minutes * 60 + $seconds;
+
+        // Multiply the total seconds by the given quantity
+        $totalSeconds *= $quantity;
+
+        // Calculate new hours, minutes, and seconds
+        $newHours = floor($totalSeconds / 3600);
+        $totalSeconds %= 3600;
+        $newMinutes = floor($totalSeconds / 60);
+        $newSeconds = $totalSeconds % 60;
+
+        // Return the new time in HH:MM:SS format
+        return sprintf('%02d:%02d:%02d', $newHours, $newMinutes, $newSeconds);
+    }
+
+    /**
+     * Removes the seconds from a time string
+     *
+     * @param string $time The time string to modify
+     * @return string The time string without seconds
+     */
+    public static function removeSecondsFromTime($time): string
+    {
+        if ($count = substr_count($time, ":")) {
+            if ($count == 2) {
+                $time = explode(":", $time);
+                return $time[0] . ":" . $time[1];
+            }
+            if ($count == 1) {
                 return $time;
             }
-            if ($tamanho == 1){
-                return $time.":00";
-            }
+        } else {
+            return $time . ":00";
         }
-        else{
-            return $time.":00:00";
-        }
+
+        return $time;
     }
 
     /**
-     * Multiplica um tempo pela quantidade informada
+     * Formats a monetary value to Brazilian currency format
      *
-     * @param string $tempo A string de tempo a ser modificada
-     * @return int A string de tempo sem os segundos
-    */
-    public static function multiplicarTempo(string $tempo,int $quantidade):string
-    {
-        // Divide o tempo em horas, minutos e segundos
-        list($horas, $minutos, $segundos) = explode(':', $tempo);
-    
-        // Converte tudo para segundos
-        $totalSegundos = $horas * 3600 + $minutos * 60 + $segundos;
-    
-        // Multiplica pelos segundos pela quantidade especificada
-        $totalSegundos *= $quantidade;
-    
-        // Calcula as novas horas, minutos e segundos
-        $novasHoras = floor($totalSegundos / 3600);
-        $totalSegundos %= 3600;
-        $novosMinutos = floor($totalSegundos / 60);
-        $novosSegundos = $totalSegundos % 60;
-    
-        // Formata a nova hora no formato HH:MM:SS
-        return sprintf('%02d:%02d:%02d', $novasHoras, $novosMinutos, $novosSegundos);
-    }
-
-    /**
-     * Remove os segundos de uma string de tempo
-     *
-     * @param string $time A string de tempo a ser modificada
-     * @return string A string de tempo sem os segundos
+     * @param float|int $input The monetary value
+     * @return string The formatted monetary value
      */
-    public static function removeSecondsTime($time):string
+    public static function formatCurrencyValue(float|int $input,$countryCode = "pt-BR"): string
     {
-        if ($tamanho = substr_count($time,":")){
-            if ($tamanho == 2){
-                $time = explode(":",$time);
-                return $time[0].":".$time[1];
-            }
-            if ($tamanho == 1){
-                return $time;
-            }
-        }
-        else{
-            return $time.":00";
-        }
-    }
-
-    /**
-     * Formata uma string contendo dias, substituindo vírgulas por espaços
-     *
-     * @param string $dias A string contendo os dias
-     * @return string A string formatada
-     */
-    public static function formatDays($dias):string
-    {
-        $dias = str_replace(","," ",$dias);
-        $dias = trim($dias);
-
-        return $dias;
-    }   
-
-    /**
-     * Formata um valor monetário para o formato de moeda brasileira
-     *
-     * @param string $input O valor monetário
-     * @return string O valor monetário formatado
-     */
-    public static function formatCurrency(float|int $input):string
-    {
-        $fmt = new NumberFormatter('pt-BR', NumberFormatter::CURRENCY );
+        $fmt = new NumberFormatter($countryCode, NumberFormatter::CURRENCY);
         return $fmt->format($input);
     }
 
     /**
-     * Remove a formatação de moeda e retorna um valor numérico
+     * Removes the currency formatting and returns a numeric value
      *
-     * @param string $input O valor monetário formatado
-     * @return float O valor numérico
+     * @param string $input The formatted monetary value
+     * @return float The numeric value
      */
-    public static function removeCurrency($input):string
+    public static function removeCurrencyFormatting($input): string
     {
-        return floatval(str_replace(",",".",preg_replace("/[^0-9.,]/", "", $input)));
+        return floatval(str_replace(",", ".", preg_replace("/[^0-9.,]/", "", $input)));
     }
 
     /**
-     * Gera um código aleatório baseado em bytes randômicos
+     * Generates a random code based on random bytes
      *
-     * @param int $number O número de bytes para gerar o código
-     * @return string O código gerado
+     * @param int $number The number of bytes to generate the code
+     * @return string The generated code
      */
-    public static function genereteRandomNumber($number):string
+    public static function generateRandomCode($number): string
     {
-        return substr(strtoupper(substr(bin2hex(random_bytes($number)), 1)),0,$number);
+        return substr(strtoupper(substr(bin2hex(random_bytes($number)), 1)), 0, $number);
     }
 
     /**
-     * Formata um endereço IP para o formato XXX.XXX.XXX.XXX
+     * Formats an IP address to the format XXX.XXX.XXX.XXX
      *
-     * @param string $ip O endereço IP a ser formatado
-     * @return string|bool O endereço IP formatado ou false se inválido
+     * @param string $ip The IP address to format
+     * @return string|bool The formatted IP address or false if invalid
      */
-    public static function formatIP($ip):string
+    public static function formatIpAddress($ip): string
     {
-
         $ip = preg_replace('/\D/', '', $ip);
+        $length = strlen($ip);
 
-        $tamanho = strlen($ip);
-
-        // Validar se o IP possui 12 dígitos
-        if ($tamanho < 4 || $tamanho > 12) {
-            // Se não tiver 12 dígitos, retorne false
+        // Validate if the IP has 12 digits
+        if ($length < 4 || $length > 12) {
             return false;
         }
 
-        // Formatar o IP no formato desejado (XXX.XXX.XXX.XXX)
+        // Format the IP address to the desired format (XXX.XXX.XXX.XXX)
         return sprintf("%03d.%03d.%03d.%03d", substr($ip, 0, 3), substr($ip, 3, 3), substr($ip, 6, 3), substr($ip, 9, 3));
-
     }
 
     /**
-     * Valida um número de cep para o formato XXXXX ou XXXXX-XXX
+     * Validates a postal code to the XXXXX or XXXXX-XXX format
      *
-     * @param string $cep O número de cep a ser validadp
-     * @return bool O número de cep valido ou false se inválido
-    */
-    public static function validCep($cep):bool 
+     * @param string $cep The postal code to validate
+     * @return bool Whether the postal code is valid
+     */
+    public static function validCep($cep): bool
     {
-        if(preg_match('/^[0-9]{5,5}([- ]?[0-9]{3,3})?$/', $cep)) {
+        if (preg_match('/^[0-9]{5,5}([- ]?[0-9]{3,3})?$/', $cep)) {
             return true;
         }
         return false;
     }
 
     /**
-     * Valida um número de telefone para o formato (XX) XXXX-XXXX ou (XX) XXXXX-XXXX
+     * Validates a phone number to the (XX) XXXX-XXXX or (XX) XXXXX-XXXX format
      *
-     * @param string $telefone O número de telefone a ser validadp
-     * @return bool O número de telefone valido ou false se inválido
+     * @param string $phone The phone number to validate
+     * @return bool Whether the phone number is valid
      */
-public static function validPhone($telefone):bool 
+    public static function validPhoneNumber($phone): bool
     {
-        // Remover quaisquer caracteres que não sejam dígitos
-        $telefone = preg_replace('/\D/', '', $telefone);
-            
-        // Verificar se o número de telefone tem o comprimento correto
-        if (strlen($telefone) != 10 && strlen($telefone) != 11) {
-            return false; // Retornar falso se o comprimento for inválido
+        $phone = preg_replace('/\D/', '', $phone);
+
+        // Validate if the phone number has the correct length
+        if (strlen($phone) != 10 && strlen($phone) != 11) {
+            return false; // Return false if the length is invalid
         }
 
         return true;
     }
 
-    public static function formatPhone($telefone):string|bool
+    /**
+     * Formats a phone number
+     *
+     * @param string $phone The phone number
+     * @return string|bool The formatted phone number or false if invalid
+     */
+    public static function formatPhoneNumber($phone): string|bool
     {
-        if(!$telefone)
+        if (!$phone)
             return false;
 
-        $telefone = self::onlynumber($telefone);
+        $phone = self::onlyNumber($phone);
 
-        if(strlen($telefone) == 10)
-            return '(' . substr($telefone, 0, 2) . ') ' . substr($telefone, 2, 4) . '-' . substr($telefone, 6);
-        else 
-            return '(' . substr($telefone, 0, 2) . ') ' . substr($telefone, 2, 5) . '-' . substr($telefone, 7);
+        if (strlen($phone) == 10)
+            return '(' . substr($phone, 0, 2) . ') ' . substr($phone, 2, 4) . '-' . substr($phone, 6);
+        else
+            return '(' . substr($phone, 0, 2) . ') ' . substr($phone, 2, 5) . '-' . substr($phone, 7);
     }
 
-    public static function formatCep($cep):string|bool
+    /**
+     * Formats a postal code
+     *
+     * @param string $cep The postal code
+     * @return string|bool The formatted postal code or false if invalid
+     */
+    public static function formatCep(string $cep): string|bool
     {
-        if(!$cep)
+        if (!$cep)
             return false;
 
-        $cep = self::onlynumber($cep);
+        $cep = self::onlyNumber($cep);
 
-        if(strlen($cep) == 8)
+        if (strlen($cep) == 8)
             return substr($cep, 0, 5) . '-' . substr($cep, 5, 3);
 
         return false;
     }
 
-    public static function removeAcentos(string $string){
-        return preg_replace(array("/(á|à|ã|â|ä)/","/(Á|À|Ã|Â|Ä)/","/(é|è|ê|ë)/","/(É|È|Ê|Ë)/","/(í|ì|î|ï)/","/(Í|Ì|Î|Ï)/","/(ó|ò|õ|ô|ö)/","/(Ó|Ò|Õ|Ô|Ö)/","/(ú|ù|û|ü)/","/(Ú|Ù|Û|Ü)/","/(ñ)/","/(Ñ)/"),explode(" ","a A e E i I o O u U n N"),$string);
+    /**
+     * Removes accents from a string
+     *
+     * @param string $string The string to process
+     * @return string The string without accents
+     */
+    public static function removeAccents(string $string)
+    {
+        return preg_replace(array("/(á|à|ã|â|ä)/", "/(Á|À|Ã|Â|Ä)/", "/(é|è|ê|ë)/", "/(É|È|Ê|Ë)/", "/(í|ì|î|ï)/", "/(Í|Ì|Î|Ï)/", "/(ó|ò|õ|ô|ö)/", "/(Ó|Ò|Õ|Ô|Ö)/", "/(ú|ù|û|ü)/", "/(Ú|Ù|Û|Ü)/", "/(ñ)/", "/(Ñ)/"), explode(" ", "a A e E i I o O u U n N"), $string);
     }
 
-    public static function createNameId(string $string){
-        return str_replace("[]","",str_replace(" ","-",self::removeAcentos(strtolower($string))));
+    /**
+     * Validates a DRE code
+     *
+     * @param string $code The DRE code to validate
+     * @return bool Whether the DRE code is valid
+     */
+    public static function validDre($code)
+    {
+        return preg_match('/^(?:\d)(?:\.\d){0,2}(?:\.\d{1,2})?$/', $code);
     }
 
-    public static function formatDre(string $codigo) {
-       
-        $codigo = strval($codigo);
-        
-        $partes = str_split($codigo, 1);
-        
+    /**
+     * Formats a DRE code
+     *
+     * @param string $code The DRE code to format
+     * @return string The formatted DRE code
+     */
+    public static function formatDre(string $code)
+    {
+        $code = strval($code);
+        $parts = str_split($code, 1);
         $i = 1;
         $b = 1;
-        $parteFinal = "";
-        foreach ($partes as $parte) {
-            $parteFinal .= $i > 3 ? $parte : $parte.".";
+        $finalPart = "";
+        foreach ($parts as $part) {
+            $finalPart .= $i > 3 ? $part : $part . ".";
             $i++;
 
-            if($i > 3){
-                if($b > 2){
-                    $parteFinal .= ".";
+            if ($i > 3) {
+                if ($b > 2) {
+                    $finalPart .= ".";
                     $b = 1;
                 }
                 $b++;
             }
         }
-        return rtrim($parteFinal,".");
+        return rtrim($finalPart, ".");
     }
 
-    public static function validarDre($string) {
-        return preg_match('/^(?:\d)(?:\.\d){0,2}(?:\.\d{1,2})?$/', $string);
-    }
-
-    public static function sumTime($tempoInicial, $tempoAdicionar) {
+    /**
+     * Adds time to an initial time value
+     *
+     * @param string $initialTime The initial time (HH:MM:SS)
+     * @param string $timeToAdd The time to add (HH:MM:SS)
+     * @return string The resulting time after adding
+     */
+    public static function addTime(string $initialTime,string $timeToAdd)
+    {
         try {
-            
-            $datetime = new \DateTime($tempoInicial);
-    
-            list($horas, $minutos, $segundos) = explode(':', $tempoAdicionar);
-    
-            $interval = new \DateInterval("PT{$horas}H{$minutos}M{$segundos}S");
-    
+            $datetime = new \DateTime($initialTime);
+
+            list($hours, $minutes, $seconds) = explode(':', $timeToAdd);
+
+            $interval = new \DateInterval("PT{$hours}H{$minutes}M{$seconds}S");
+
             $datetime->add($interval);
-   
+
             return $datetime->format('H:i:s');
         } catch (\Exception $e) {
-            Logger::error($e->getMessage().$e->getTraceAsString());
+            Logger::error($e->getMessage() . $e->getTraceAsString());
             return null;
         }
     }
 
-    public static function subTime($tempoInicial, $tempoDiminuir) {
+    /**
+     * Subtracts time from an initial time value
+     *
+     * @param string $initialTime The initial time (HH:MM:SS)
+     * @param string $timeToSubtract The time to subtract (HH:MM:SS)
+     * @return string The resulting time after subtraction
+     */
+    public static function subtractTime(string $initialTime,string $timeToSubtract)
+    {
         try {
-            $datetime = new \DateTime($tempoInicial);
-    
-            list($horas, $minutos, $segundos) = explode(':', $tempoDiminuir);
+            $datetime = new \DateTime($initialTime);
 
-            $interval = new \DateInterval("PT{$horas}H{$minutos}M{$segundos}S");
-    
+            list($hours, $minutes, $seconds) = explode(':', $timeToSubtract);
+
+            $interval = new \DateInterval("PT{$hours}H{$minutes}M{$seconds}S");
+
             $datetime->sub($interval);
 
             return $datetime->format('H:i:s');
         } catch (\Exception $e) {
-            Logger::error($e->getMessage().$e->getTraceAsString());
+            Logger::error($e->getMessage() . $e->getTraceAsString());
             return null;
         }
     }
 
-    public static function sumDate($tempoInicial, $tempoAdicionar) {
+    /**
+     * Adds a time interval to a date
+     *
+     * @param string $initialDate The initial date (Y-m-d H:i:s)
+     * @param string $timeToAdd The time interval to add (HH:MM:SS)
+     * @return string The resulting date after adding the interval
+     */
+    public static function addDateTime(string $initialDate,string $timeToAdd)
+    {
         try {
-            
-            $datetime = new \DateTime($tempoInicial);
-    
-            list($horas, $minutos, $segundos) = explode(':', $tempoAdicionar);
-    
-            $interval = new \DateInterval("PT{$horas}H{$minutos}M{$segundos}S");
-    
+            $datetime = new \DateTime($initialDate);
+
+            list($hours, $minutes, $seconds) = explode(':', $timeToAdd);
+
+            $interval = new \DateInterval("PT{$hours}H{$minutes}M{$seconds}S");
+
             $datetime->add($interval);
-   
+
             return $datetime->format('Y-m-d H:i:s');
         } catch (\Exception $e) {
-            Logger::error($e->getMessage().$e->getTraceAsString());
+            Logger::error($e->getMessage() . $e->getTraceAsString());
             return null;
         }
     }
 
-    public static function subDate($tempoInicial, $tempoDiminuir) {
+    /**
+     * Subtracts a time interval from a date
+     *
+     * @param string $initialDate The initial date (Y-m-d H:i:s)
+     * @param string $timeToSubtract The time interval to subtract (HH:MM:SS)
+     * @return string The resulting date after subtracting the interval
+     */
+    public static function subtractDateTime(string $initialDate,string $timeToSubtract)
+    {
         try {
-            $datetime = new \DateTime($tempoInicial);
-    
-            list($horas, $minutos, $segundos) = explode(':', $tempoDiminuir);
+            $datetime = new \DateTime($initialDate);
 
-            $interval = new \DateInterval("PT{$horas}H{$minutos}M{$segundos}S");
-    
+            list($hours, $minutes, $seconds) = explode(':', $timeToSubtract);
+
+            $interval = new \DateInterval("PT{$hours}H{$minutes}M{$seconds}S");
+
             $datetime->sub($interval);
 
             return $datetime->format('Y-m-d H:i:s');
         } catch (\Exception $e) {
-            Logger::error($e->getMessage().$e->getTraceAsString());
+            Logger::error($e->getMessage() . $e->getTraceAsString());
             return null;
         }
     }
 
-    public static function getAbsolutePath($path) {
+    /**
+     * Converts a relative file path to an absolute path
+     *
+     * @param string $path The file path to convert
+     * @return string The absolute file path
+     */
+    public static function getAbsolutePath(string $path)
+    {
         $path = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $path);
         $parts = array_filter(explode(DIRECTORY_SEPARATOR, $path), 'strlen');
         $absolutes = array();
@@ -659,47 +688,57 @@ public static function validPhone($telefone):bool
         return implode(DIRECTORY_SEPARATOR, $absolutes);
     }
 
-    public static function genereteId(){
-        return \intval(self::onlynumber(\microtime()));
+    /**
+     * Generates a unique ID based on the current microtime
+     *
+     * @return int The generated ID
+     */
+    public static function generateId()
+    {
+        return intval(self::onlyNumber(microtime()));
     }
 
-    public static function getUserIP() {
-        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])
-            && isset($_SERVER['REMOTE_ADDR']))
-        {
+    /**
+     * Retrieves the user's IP address
+     *
+     * @return string The IP address of the user
+     */
+    public static function getUserIp()
+    {
+        if (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && isset($_SERVER['REMOTE_ADDR'])) {
             $client_ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-
             return array_shift($client_ips);
-        }
-        elseif (isset($_SERVER['HTTP_CLIENT_IP'])
-            && isset($_SERVER['REMOTE_ADDR']))
-        {
+        } elseif (isset($_SERVER['HTTP_CLIENT_IP']) && isset($_SERVER['REMOTE_ADDR'])) {
             $client_ips = explode(',', $_SERVER['HTTP_CLIENT_IP']);
-
             return array_shift($client_ips);
-        }
-        elseif (isset($_SERVER['REMOTE_ADDR']))
-        {
+        } elseif (isset($_SERVER['REMOTE_ADDR'])) {
             return $_SERVER['REMOTE_ADDR'];
         }
     }
 
-    public static function isMobile():bool
+    /**
+     * Checks if the current user is on a mobile device
+     *
+     * @return bool True if the user is on a mobile device, otherwise false
+     */
+    public static function isMobile(): bool
     {
         $useragent = $_SERVER['HTTP_USER_AGENT'];
 
-        if(preg_match('/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows (ce|phone)|xda|xiino/i',$useragent)||preg_match('/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i',substr($useragent,0,4)))
-            return true;
-
-        return false;
+        return preg_match('/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows (ce|phone)|xda|xiino/i', $useragent) || preg_match('/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i', substr($useragent, 0, 4));
     }
 
-
-    public static function slug(string $text){
-
+    /**
+     * Generates a slug for a given string
+     *
+     * @param string $text The text to be converted to a slug
+     * @return string The generated slug
+     */
+    public static function slug(string $text)
+    {
         $replace = [
             '<' => '', '>' => '', '-' => ' ', '&' => '',
-            '"' => '', 'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä'=> 'Ae',
+            '"' => '', 'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'Ae',
             'Ä' => 'A', 'Å' => 'A', 'Ā' => 'A', 'Ą' => 'A', 'Ă' => 'A', 'Æ' => 'Ae',
             'Ç' => 'C', 'Ć' => 'C', 'Č' => 'C', 'Ĉ' => 'C', 'Ċ' => 'C', 'Ď' => 'D', 'Đ' => 'D',
             'Ð' => 'D', 'È' => 'E', 'É' => 'E', 'Ê' => 'E', 'Ë' => 'E', 'Ē' => 'E',
@@ -744,20 +783,19 @@ public static function validPhone($telefone):bool
             'ш' => 'sh', 'щ' => 'sch', 'ъ' => '', 'ы' => 'y', 'ь' => '', 'э' => 'e',
             'ю' => 'yu', 'я' => 'ya'
         ];
-    
-        // make a human readable string
+
+        // Make a human-readable string
         $text = strtr($text, $replace);
-    
-        // replace non letter or digits by -
+
+        // Replace non-letter or digits with a space
         $text = preg_replace('~[^\pL\d.]+~u', '-', $text);
-    
-        // trim
+
+        // Trim spaces
         $text = trim($text, '-');
-    
-        // remove unwanted characters
+
+        // Remove unwanted characters
         $text = preg_replace('~[^-\w.]+~', '', $text);
-    
+
         return strtolower($text);
     }
-
 }

@@ -107,7 +107,7 @@ final class Router{
         }
 
         foreach ($this->folders as $folder){
-            if(class_exists($folder."\\".$controller) && is_subclass_of($folder."\\".$controller,"NeoFramework\Core\Abstract\Controller")){
+            if((class_exists($folder."\\".$controller) || class_exists($folder."\\".$controller."Controller")) && is_subclass_of($folder."\\".$controller,"NeoFramework\Core\Abstract\Controller")){
                 $this->namespace = $folder;
                 $this->controller = $controller; 
                 return true;
