@@ -98,13 +98,14 @@ final class Router{
     }
 
     private function controllerExist($controller){
-        $controller = ucfirst($controller);
-
+    
         if(in_array($controller,$this->routesRewrite) && class_exists($this->routesRewrite[$controller])){
             $this->namespace =  (new \ReflectionClass($this->routesRewrite[$controller]))->getNamespaceName();
             $this->controller = $controller; 
             return true;
         }
+
+        $controller = ucfirst($controller);
 
         foreach ($this->folders as $folder){
             if((class_exists($folder."\\".$controller) || class_exists($folder."\\".$controller."Controller")) && is_subclass_of($folder."\\".$controller,"NeoFramework\Core\Abstract\Controller")){
@@ -256,4 +257,3 @@ final class Router{
         return ($this->uri == "/");    
     }
 }
-?>
