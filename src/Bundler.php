@@ -27,14 +27,14 @@ class Bundler
 
             self::getFiles($minifier,Functions::getRoot()."Resources/Css",$files);
 
-            $minifier->minify(Functions::getRoot()."public/assets/css/".$key."_".Functions::genereteId().".css");
+            $minifier->minify(Functions::getRoot()."public/assets/css/".$key."_".Functions::generateId().".css");
         }
         
         $minifier = new CSS();
 
         self::getFiles($minifier,Functions::getRoot()."Resources/Css");
 
-        $minifier->minify(Functions::getRoot()."public/assets/css/"."ALL_".Functions::genereteId().".css");
+        $minifier->minify(Functions::getRoot()."public/assets/css/"."ALL_".Functions::generateId().".css");
 
         print_r(scandir(Functions::getRoot()."public/assets/css"));
         echo PHP_EOL;
@@ -46,14 +46,14 @@ class Bundler
 
             self::getFiles($minifier,Functions::getRoot()."Resources/Js",$files);
 
-            $minifier->minify(Functions::getRoot()."public/assets/js/".$key."_".Functions::genereteId().".js");
+            $minifier->minify(Functions::getRoot()."public/assets/js/".$key."_".Functions::generateId().".js");
         }
         
         $minifier = new JS();
 
         self::getFiles($minifier,Functions::getRoot()."Resources/Js");
 
-        $minifier->minify(Functions::getRoot()."public/assets/js/"."ALL_".Functions::genereteId().".js");
+        $minifier->minify(Functions::getRoot()."public/assets/js/"."ALL_".Functions::generateId().".js");
         
         print_r(scandir(Functions::getRoot()."public/assets/js"));
         echo PHP_EOL;
