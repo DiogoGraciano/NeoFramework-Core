@@ -6,7 +6,10 @@
     "autoload": {
         "psr-4": {
             "NeoFramework\\Core\\": "src/"
-        }
+        },
+        "files": [
+            "src/helpers.php"
+        ]
     },
     "authors": [
         {
@@ -26,6 +29,7 @@
         "nesbot/carbon": "^3.8",
         "guzzlehttp/guzzle": "^7.9",
         "respect/validation": "^2.4",
-        "symfony/cache": "^7.2"
+        "symfony/cache": "^7.2",
+        "vlucas/phpdotenv": "^5.6"
     }
 }

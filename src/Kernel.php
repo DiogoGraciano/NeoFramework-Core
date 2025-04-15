@@ -2,12 +2,18 @@
 
 namespace NeoFramework\Core;
 
+use Dotenv\Dotenv;
 use Respect\Validation\Factory;
 
 class Kernel
 {
     public static function init()
-    {
+    {   
+        error_reporting(E_ALL);
+
+        $dotenv = Dotenv::createImmutable(Functions::getRoot());
+        $dotenv->load();
+
         $whoops = new \Whoops\Run;
         if ($_ENV["ENVIRONMENT"] !== "prod") {
             $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
