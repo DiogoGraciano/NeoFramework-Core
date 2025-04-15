@@ -14,7 +14,7 @@ class File extends \SplFileObject
         return $finfo->file($this->getRealPath());
     }
 
-    public function save(string $name = null,string $folder = "public/assets",fileStorageDisk $disk):bool
+    public function save(?string $name = null,string $folder = "public/assets",fileStorageDisk $disk):bool
     {
         $fileStorage = new FileStorage($disk,$folder);
 
