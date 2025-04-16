@@ -36,8 +36,8 @@ class FileStorage
                 ])
             );
         else {
-            $client = new S3Client($_ENV["AWS_CLIENT"]);
-            $adapter = new AwsS3V3Adapter($client, $_ENV["AWS_BUCKETNAME"]);
+            $client = new S3Client(env("AWS_CLIENT"));
+            $adapter = new AwsS3V3Adapter($client, env("AWS_BUCKETNAME"));
         }
 
         $this->filesystem = new Filesystem($adapter);

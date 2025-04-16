@@ -16,11 +16,11 @@ final class Cache {
     private static function load(): TagAwareCacheInterface
     {
         if (self::$instance === null) {
-            if (!isset($_ENV["CACHE_ADAPTER"])) {
+            if (!env("CACHE_ADAPTER")) {
                 throw new Exception("CACHE_ADAPTER not found in the .env file, please configure the cache adapter");
             }
 
-            $adapterType = strtolower($_ENV["CACHE_ADAPTER"] ?? 'filesystem');
+            $adapterType = strtolower(!env("CACHE_ADAPTER") ?? 'filesystem');
 
             switch ($adapterType) {
                 case 'memcached':
@@ -46,13 +46,13 @@ final class Cache {
 
     private static function createMemcachedAdapter(): MemcachedAdapter
     {
-        if (!isset($_ENV["MEMCACHED_CONNECTION_URL"])) {
+        if (!!env("MEMCACHED_CONNECTION_URL")) {
             throw new Exception("MEMCACHED_CONNECTION_URL not found in the .env file. Please configure Memcached.");
         }
 
         try {
             $client = MemcachedAdapter::createConnection(
-                $_ENV["MEMCACHED_CONNECTION_URL"]
+                env("MEMCACHED_CONNECTION_URL")
             );
             return new MemcachedAdapter($client);
         } catch (\Exception $e) {
@@ -62,13 +62,13 @@ final class Cache {
 
     private static function createRedisAdapter(): RedisAdapter
     {
-        if (!isset($_ENV["REDIS_CONNECTION_URL"])) {
+        if (!env("REDIS_CONNECTION_URL")) {
             throw new Exception("REDIS_CONNECTION_URL not found in the .env file. Please configure Redis.");
         }
 
         try {
             $client = RedisAdapter::createConnection(
-                $_ENV["REDIS_CONNECTION_URL"]
+                env("REDIS_CONNECTION_URL")
             );
             return new RedisAdapter($client);
          } catch (\Exception $e) {

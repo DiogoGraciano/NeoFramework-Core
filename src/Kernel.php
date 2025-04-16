@@ -15,7 +15,7 @@ class Kernel
         $dotenv->load();
 
         $whoops = new \Whoops\Run;
-        if ($_ENV["ENVIRONMENT"] !== "prod") {
+        if (env("ENVIRONMENT") !== "prod") {
             $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
         } else {
             $whoops->pushHandler(function ($e) {

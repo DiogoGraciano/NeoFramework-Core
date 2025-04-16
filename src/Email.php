@@ -56,33 +56,33 @@ class Email{
 
     public function send($assunto,$mensagem,$isHtml = false):bool
     {
-        if(!$_ENV["SMTP_SERVIDOR"] || !$_ENV["SMTP_PORT"]){
+        if(!env("SMTP_SERVIDOR") || !env("SMTP_PORT")){
             return false;
         }
 
         $this->email->CharSet = "UTF-8";
         $this->email->setLanguage("pt_br");
         $this->email->isSMTP();
-        $this->email->Host = $_ENV["SMTP_SERVIDOR"];
-        if($_ENV["SMTP_USUARIO"] && $_ENV["SMTP_SENHA"])
+        $this->email->Host = env("SMTP_SERVIDOR");
+        if(env("SMTP_USUARIO") && env("SMTP_SENHA"))
         {
             $this->email->SMTPAuth    = true;
-            $this->email->Username    = $_ENV["SMTP_USUARIO"];
-            $this->email->Password    = $_ENV["SMTP_SENHA"];
+            $this->email->Username    = env("SMTP_USUARIO");
+            $this->email->Password    = env("SMTP_SENHA");
         }
 
-        if($_ENV["SMTP_ENCRYPTION"])
+        if(env("SMTP_ENCRYPTION"))
         {
-            $this->email->SMTPSecure = $_ENV["SMTP_ENCRYPTION"];
+            $this->email->SMTPSecure = env("SMTP_ENCRYPTION");
         }
             
-        $this->email->Port = $_ENV["SMTP_PORT"];
+        $this->email->Port = env("SMTP_PORT");
 
         if(!$this->from)
-            $this->email->setFrom($_ENV["SMTP_EMAIL"], $_ENV["SMTP_NOME"]);
+            $this->email->setFrom(env("SMTP_EMAIL"), env("SMTP_NOME"));
 
         if(!$this->emailsTo){
-            $this->email->addAddress($_ENV["SMTP_EMAIL"], $_ENV["SMTP_NOME"]);
+            $this->email->addAddress(env("SMTP_EMAIL"), env("SMTP_NOME"));
         }
 
         foreach ($this->emailsTo as $email){

@@ -13,8 +13,8 @@ class Criptrografy
     public static function encrypt($data):string|null
     {
         if($data){
-            $first_key = base64_decode($_ENV["FIRSTKEY"]);
-            $second_key = base64_decode($_ENV["SECONDKEY"]);    
+            $first_key = base64_decode(env("FIRSTKEY"));
+            $second_key = base64_decode(env("SECONDKEY"));    
                 
             $method = "aes-256-cbc";    
             $iv_length = openssl_cipher_iv_length($method);
@@ -44,8 +44,8 @@ class Criptrografy
         if($input){
             $input = str_replace("@","/",$input);
         
-            $first_key = base64_decode($_ENV["FIRSTKEY"]);
-            $second_key = base64_decode($_ENV["SECONDKEY"]);            
+            $first_key = base64_decode(env("FIRSTKEY"));
+            $second_key = base64_decode(env("SECONDKEY"));             
             $mix =  base64_decode($input);
                     
             $method = "aes-256-cbc";    
