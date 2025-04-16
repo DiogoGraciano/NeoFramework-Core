@@ -38,7 +38,7 @@ final class Router{
     }
 
     private function getFolders(){
-        $pasta = $arquivos = Functions::getRoot().(env("PATH_CONTROLLERS") ?? env("PATH_CONTROLLERS") ?? "App/Controllers");
+        $pasta = $arquivos = Functions::getRoot().(env("PATH_CONTROLLERS")?:"App/Controllers");
         $arquivos = scandir($pasta);
         foreach ($arquivos as $arquivo) {
             if (!str_contains($arquivo, '.'))
