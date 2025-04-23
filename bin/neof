@@ -36,23 +36,26 @@ $app = new Ahc\Cli\Application(
     '1.0'
 );
 
-$app->add(new Migrate,'mig');
-$app->add(new Build,'bu');
+$app->add(new Migrate, 'mig');
+$app->add(new Build, 'bu');
 
 $class = [];
-$folder = Functions::getRoot()."App/Controllers";
-$files = scandir($folder);
-foreach ($files as $file) {
-    if (!str_contains($file, '.'))
-        $class[] = "App\Controllers\\".$file;
-}
+$folder = Functions::getRoot() . "App/Commands";
+if (is_dir($folder)) {
+    $files = scandir($folder);
+    foreach ($files as $file) {
+        if (!str_contains($file, '.'))
+            $class[] = "App\Commands\\" . $file;
+    }
 
-if(!empty($class)){
-    foreach ($class as $command) {
-        if(is_subclass_of("Ahc\Cli\Input\Command",$command)){
-            $app->add(new $command);
+    if (!empty($class)) {
+        foreach ($class as $command) {
+            if (is_subclass_of("Ahc\Cli\Input\Command", $command)) {
+                $app->add(new $command);
+            }
         }
     }
 }
+
 
 $app->logo($logo)->handle($_SERVER['argv']);

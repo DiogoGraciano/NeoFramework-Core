@@ -2,6 +2,7 @@
 
 namespace NeoFramework\Core\Commands;
 
+use Ahc\Cli\Helper\Shell;
 use Ahc\Cli\Input\Command;
 use Ahc\Cli\Output\Color;
 use Exception;
@@ -21,8 +22,10 @@ class Build extends Command
         $color = new Color;
 
         try{
-            if(file_exists(Functions::getRoot()."tailwindcss -i ./Resources/Css/main.css -o ./Resources/Css/tailwind.css --minify")){
-                shell_exec("./tailwindcss -i ./Resources/Css/main.css -o ./Resources/Css/tailwind.css --minify");
+            if(file_exists(Functions::getRoot()."tailwindcss")){
+                $shell = new Shell(Functions::getRoot()."tailwindcss -i ./Resources/Css/main.css -o ./Resources/Css/tailwind.css --minify");
+                $shell->execute();
+                $shell->getErrorOutput();
             }
 
             if(!file_exists(Functions::getRoot()."Config".DIRECTORY_SEPARATOR."bundler.config.php")){
