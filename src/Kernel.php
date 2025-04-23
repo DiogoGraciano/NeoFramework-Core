@@ -7,12 +7,16 @@ use Respect\Validation\Factory;
 
 class Kernel
 {
+    public static function loadEnv(){
+        $dotenv = Dotenv::createImmutable(Functions::getRoot());
+        $dotenv->load();
+    }
+
     public static function init()
     {   
         error_reporting(E_ALL);
 
-        $dotenv = Dotenv::createImmutable(Functions::getRoot());
-        $dotenv->load();
+        self::loadEnv();
 
         $whoops = new \Whoops\Run;
         if (env("ENVIRONMENT") !== "prod") {

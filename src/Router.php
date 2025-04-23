@@ -38,11 +38,11 @@ final class Router{
     }
 
     private function getFolders(){
-        $pasta = $arquivos = Functions::getRoot().(env("PATH_CONTROLLERS")?:"App/Controllers");
-        $arquivos = scandir($pasta);
-        foreach ($arquivos as $arquivo) {
-            if (!str_contains($arquivo, '.'))
-                $this->folders[] = "App\Controllers\\".$arquivo;
+        $folder = Functions::getRoot()."App/Controllers";
+        $files = scandir($folder);
+        foreach ($files as $file) {
+            if (!str_contains($file, '.'))
+                $this->folders[] = "App\Controllers\\".$file;
         }
     }
 

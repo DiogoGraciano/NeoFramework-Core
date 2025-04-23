@@ -1,0 +1,36 @@
+<?php
+
+namespace NeoFramework\Core\Commands;
+
+use Ahc\Cli\Input\Command;
+use Ahc\Cli\Output\Color;
+use Diogodg\Neoorm\Migrations\GeneretePhpDoc;
+use Exception;
+use NeoFramework\Core\Kernel;
+
+class Migrate extends Command
+{
+    public function __construct()
+    {   
+        parent::__construct("migrate","Make migration of your database");
+        
+        $this->version("1.0")->option("-r --recreate","Recreate your database");
+    }
+
+    public function execute(bool $recreate){
+
+        $color = new Color;
+
+        try{
+            Kernel::loadEnv();
+            (new Migrate)->execute($recreate);
+
+            if(env("ENVIRONMENT") != "prod"){
+                (new GeneretePhpDoc)->execute();
+            }
+        }
+        catch(Exception $e){
+            echo $color->error($e->getMessage().PHP_EOL.$e->getTraceAsString());
+        }
+    }
+}
