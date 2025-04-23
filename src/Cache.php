@@ -46,13 +46,18 @@ final class Cache {
 
     private static function createMemcachedAdapter(): MemcachedAdapter
     {
-        if (!!env("MEMCACHED_CONNECTION_URL")) {
-            throw new Exception("MEMCACHED_CONNECTION_URL not found in the .env file. Please configure Memcached.");
+        if (!env("MEMCACHED_HOST") || !env("MEMCACHED_PORT")) {
+            throw new Exception("MEMCACHED_HOST or MEMCACHED_PORT not found in the .env file. Please configure Memcached.");
         }
 
         try {
+            $password = env("MEMCACHED_USER").":".env("MEMCACHED_PASS")."@";
+
+            if($password == ":@")
+                $password = "";
+
             $client = MemcachedAdapter::createConnection(
-                env("MEMCACHED_CONNECTION_URL")
+                "memcached://".$password.env("MEMCACHED_HOST").":".env("MEMCACHED_PORT")
             );
             return new MemcachedAdapter($client);
         } catch (\Exception $e) {
@@ -62,13 +67,18 @@ final class Cache {
 
     private static function createRedisAdapter(): RedisAdapter
     {
-        if (!env("REDIS_CONNECTION_URL")) {
-            throw new Exception("REDIS_CONNECTION_URL not found in the .env file. Please configure Redis.");
+        if (!env("REDIS_HOST") || !env("REDIS_PORT")) {
+            throw new Exception("REDIS_HOST or REDIS_PORT not found in the .env file. Please configure Redis.");
         }
 
         try {
+            $password = env("REDIS_PASSWORD");
+
+            if($password != "")
+                $password .= "@"; 
+
             $client = RedisAdapter::createConnection(
-                env("REDIS_CONNECTION_URL")
+                "redis://".$password.env("REDIS_HOST").":".env("REDIS_PORT")."/0"
             );
             return new RedisAdapter($client);
          } catch (\Exception $e) {
