@@ -21,7 +21,6 @@ class QueueManager
     {
         if (self::$instance === null) {
             $driver = env('QUEUE_DRIVER');
-            
             switch ($driver) {
                case 'redis':
                     $client = new Redis();

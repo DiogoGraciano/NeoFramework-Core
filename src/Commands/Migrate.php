@@ -7,7 +7,6 @@ use Ahc\Cli\Output\Color;
 use Diogodg\Neoorm\Migrations\GeneretePhpDoc;
 use Diogodg\Neoorm\Migrations\Migrate as MigrationsMigrate;
 use Exception;
-use NeoFramework\Core\Kernel;
 
 class Migrate extends Command
 {
@@ -23,7 +22,6 @@ class Migrate extends Command
         $color = new Color;
 
         try{
-            Kernel::loadEnv();
             (new MigrationsMigrate)->execute(is_null($recreate));
 
             if(env("ENVIRONMENT") != "prod"){

@@ -24,7 +24,7 @@ class Clear extends Command
         }
 
         try{
-            $color->success("Clear ".QueueManager::getInstance()->getClient()->clear($queue)." from ".$queue );
+            echo $color->ok("Clear ".QueueManager::getInstance()->getClient()->clear($queue)." jobs from queue ".$queue.PHP_EOL);
         }
         catch(Exception $e){
             echo $color->error($e->getMessage().PHP_EOL.$e->getTraceAsString());

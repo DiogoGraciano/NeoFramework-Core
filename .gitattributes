@@ -1,4 +1,4 @@
 /tests/ export-ignore
 /docker-compose.yml export-ignore
-/dockerFile export-ignore
+/Dockerfile export-ignore
 /phpunit.xml export-ignore

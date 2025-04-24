@@ -28,11 +28,9 @@ class Show extends Command
             $limit = 15;
         }
 
-        $writer = new Writer();
-
         try{
             $jobs = QueueManager::getInstance()->getClient()->getJobs($queue,$limit);
-            $writer->table($jobs);
+            print_r($color->info(json_encode($jobs).PHP_EOL));
         }
         catch(Exception $e){
             echo $color->error($e->getMessage().PHP_EOL.$e->getTraceAsString());

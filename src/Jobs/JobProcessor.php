@@ -2,6 +2,8 @@
 
 namespace NeoFramework\Core\Jobs;
 
+use Ahc\Cli\Output\Color;
+use Ahc\Cli\Output\Writer;
 use Exception;
 use NeoFramework\Core\Jobs\Entity\JobEntity;
 use NeoFramework\Core\Jobs\Interfaces\Client;
@@ -70,12 +72,16 @@ class JobProcessor
      */
     public function work(string $queue = "default", int $sleep = 1): void
     {
+        $color = new Color();
         while (!$this->shouldStop) {
             
             $job = $this->client->dequeue($queue);
             
             if ($job) {
-                $this->processJob($job,$queue);
+                if($this->processJob($job,$queue))
+                    echo $color->ok("Job processed: ".$job->toJson().PHP_EOL);
+                else
+                    echo $color->error("Job failed: ".$job->toJson().PHP_EOL);
             } else {
                 sleep($sleep);
             }
