@@ -71,8 +71,6 @@ class JobProcessor
     public function work(string $queue = "default", int $sleep = 1): void
     {
         while (!$this->shouldStop) {
-
-            $this->client->migrateScheduledJobs($queue);
             
             $job = $this->client->dequeue($queue);
             

@@ -10,7 +10,11 @@ if (\file_exists(__DIR__ . '/../../../autoload.php')) {
 }
 
 use NeoFramework\Core\Commands\Build;
+use NeoFramework\Core\Commands\Jobs;
 use NeoFramework\Core\Commands\Migrate;
+use NeoFramework\Core\Commands\Queue\Clear;
+use NeoFramework\Core\Commands\Queue\Show;
+use NeoFramework\Core\Commands\Queue\Work;
 use NeoFramework\Core\Functions;
 
 if (PHP_VERSION_ID < 80000) {
@@ -38,6 +42,9 @@ $app = new Ahc\Cli\Application(
 
 $app->add(new Migrate, 'mig');
 $app->add(new Build, 'bu');
+$app->add(new Work, 'qw');
+$app->add(new Show,"qs");
+$app->add(new Clear,"qc");
 
 $class = [];
 $folder = Functions::getRoot() . "App/Commands";

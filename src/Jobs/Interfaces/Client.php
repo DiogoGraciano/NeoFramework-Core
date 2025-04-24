@@ -8,6 +8,7 @@ interface Client
     public function enqueue(JobEntity $job, string $queue = "default"): bool;
     public function dequeue(string $queue = "default"): ?JobEntity;
     public function size(string $queue = "default"): int;
+    public function clear(string $queue = "default"): int;
     public function getJobs(string $queue = "default", int $limit = 10): array;
     public function lock(string $jobId, int $ttl = 60): bool;
     public function unlock(string $jobId): bool;

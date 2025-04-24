@@ -1,4 +1,5 @@
 <?php
+
 namespace NeoFramework\Core\Jobs\Drivers;
 
 use Exception;
@@ -19,20 +20,20 @@ class Redis implements Client
         $port = $config['port'] ?? env("REDIS_PORT");
         $password = $config['password'] ?? env("REDIS_PASSWORD", "");
         $this->prefix = $config['prefix'] ?? $this->prefix;
-        
+
         if (!$host || !$port) {
             throw new Exception("Redis host or port not configured");
         }
 
         $redis = new PhpRedis();
-        
+
         try {
             $redis->connect($host, $port);
-            
+
             if ($password) {
                 $redis->auth($password);
             }
-            
+
             $this->redis = $redis;
         } catch (Exception $e) {
             throw new Exception("Failed to connect to Redis: " . $e->getMessage());
@@ -40,7 +41,7 @@ class Redis implements Client
     }
 
     /**
-     * Gera uma chave com o prefixo para o sistema de filas
+     * Generates a key with the prefix for the queue system
      */
     private function getKey(string $type, string $name): string
     {
@@ -48,24 +49,24 @@ class Redis implements Client
     }
 
     /**
-     * Adiciona um job à fila
+     * Adds a job to the queue
      */
     public function enqueue(JobEntity $job, string $queue = "default"): bool
     {
         try {
-            // Se o job tem agendamento futuro, adiciona na fila de agendados
+            // If job has future scheduling, add it to the scheduled queue
             if ($job->getSchedule() && $job->getSchedule() > new DateTime()) {
                 return $this->scheduleJob($job, $queue);
             }
 
-            // Caso contrário, adiciona na fila principal
+            // Otherwise, add it to the main queue
             $queueKey = $this->getKey('queue', $queue);
             $job->setStatus('pending');
             $result = $this->redis->lPush($queueKey, $job->toJson());
-            
-            // Armazena detalhes do job em um hash separado
+
+            // Store job details in a separate hash for easy access
             $this->storeJobDetails($job);
-            
+
             return $result > 0;
         } catch (Exception $e) {
             return false;
@@ -73,20 +74,20 @@ class Redis implements Client
     }
 
     /**
-     * Adiciona um job à fila de agendamento
+     * Adds a job to the scheduling queue
      */
     public function scheduleJob(JobEntity $job, string $queue = "default"): bool
     {
         try {
             $scheduledQueueKey = $this->getKey('scheduled', $queue);
             $job->setStatus('scheduled');
-            
+
             $timestamp = $job->getSchedule()->getTimestamp();
             $result = $this->redis->zAdd($scheduledQueueKey, $timestamp, $job->toJson());
-            
-            // Armazena detalhes do job em um hash separado
+
+            // Store job details in a separate hash for easy access
             $this->storeJobDetails($job);
-            
+
             return $result > 0;
         } catch (Exception $e) {
             return false;
@@ -94,7 +95,7 @@ class Redis implements Client
     }
 
     /**
-     * Armazena detalhes do job em um hash separado para fácil acesso
+     * Stores job details in a separate hash for easy access
      */
     private function storeJobDetails(JobEntity $job): void
     {
@@ -104,27 +105,27 @@ class Redis implements Client
     }
 
     /**
-     * Remove e retorna o próximo job da fila
+     * Removes and returns the next job from the queue
      */
     public function dequeue(string $queue = "default"): ?JobEntity
     {
         try {
-            // Verifica se há jobs agendados que já podem ser executados
+            // Check if there are scheduled jobs ready to be executed
             $this->migrateScheduledJobs($queue);
-            
+
             $queueKey = $this->getKey('queue', $queue);
             $item = $this->redis->rPop($queueKey);
-            
+
             if (!$item) {
                 return null;
             }
-            
+
             $job = JobEntity::fromJson($item);
             $job->setStatus('processing');
-            
-            // Atualiza os detalhes do job
+
+            // Update job details
             $this->storeJobDetails($job);
-            
+
             return $job;
         } catch (Exception $e) {
             return null;
@@ -132,7 +133,7 @@ class Redis implements Client
     }
 
     /**
-     * Move jobs agendados que já estão no prazo para a fila principal
+     * Moves scheduled jobs that are due to the main queue
      */
     public function migrateScheduledJobs(string $queue = "default"): int
     {
@@ -140,31 +141,31 @@ class Redis implements Client
         $queueKey = $this->getKey('queue', $queue);
         $now = time();
         $count = 0;
-        
-        // Busca todos os jobs agendados que já estão no prazo
+
+        // Get all scheduled jobs that are due
         $jobs = $this->redis->zRangeByScore($scheduledQueueKey, 0, $now);
-        
+
         if (!empty($jobs)) {
             foreach ($jobs as $jobJson) {
                 if ($this->redis->lPush($queueKey, $jobJson)) {
                     $count++;
-                    
-                    // Atualiza o status do job
+
+                    // Update job status
                     $job = JobEntity::fromJson($jobJson);
                     $job->setStatus('pending');
                     $this->storeJobDetails($job);
                 }
             }
-            
-            // Remove os jobs migrados da fila de agendamento
+
+            // Remove migrated jobs from the scheduled queue
             $this->redis->zRemRangeByScore($scheduledQueueKey, 0, $now);
         }
-        
+
         return $count;
     }
 
     /**
-     * Retorna os jobs agendados que já estão no prazo
+     * Returns scheduled jobs that are due
      */
     public function getDueJobs(string $queue = "default"): array
     {
@@ -172,12 +173,12 @@ class Redis implements Client
             $scheduledQueueKey = $this->getKey('scheduled', $queue);
             $now = time();
             $jobsJson = $this->redis->zRangeByScore($scheduledQueueKey, 0, $now);
-            
+
             $jobs = [];
             foreach ($jobsJson as $jobJson) {
                 $jobs[] = JobEntity::fromJson($jobJson);
             }
-            
+
             return $jobs;
         } catch (Exception $e) {
             return [];
@@ -185,7 +186,7 @@ class Redis implements Client
     }
 
     /**
-     * Retorna o tamanho da fila
+     * Returns the queue size
      */
     public function size(string $queue = "default"): int
     {
@@ -198,7 +199,7 @@ class Redis implements Client
     }
 
     /**
-     * Obtém os jobs de uma fila sem removê-los
+     * Gets jobs from a queue without removing them
      */
     public function getJobs(string $queue = "default", int $limit = 10): array
     {
@@ -206,14 +207,14 @@ class Redis implements Client
             $queueKey = $this->getKey('queue', $queue);
             $length = min($this->redis->lLen($queueKey), $limit);
             $jobs = [];
-            
+
             for ($i = 0; $i < $length; $i++) {
                 $jobJson = $this->redis->lIndex($queueKey, $i);
                 if ($jobJson) {
                     $jobs[] = JobEntity::fromJson($jobJson);
                 }
             }
-            
+
             return $jobs;
         } catch (Exception $e) {
             return [];
@@ -221,7 +222,7 @@ class Redis implements Client
     }
 
     /**
-     * Adiciona um job à fila novamente com contagem de tentativas
+     * Adds a job back to the queue with attempt count
      */
     public function retry(JobEntity $job, string $queue = "default", int $attempts = 0): bool
     {
@@ -230,15 +231,15 @@ class Redis implements Client
         } else {
             $job->incrementAttempts();
         }
-        
+
         $job->setStatus('pending');
         $this->storeJobDetails($job);
-        
+
         return $this->enqueue($job, $queue);
     }
 
     /**
-     * Cria um bloqueio para um job específico
+     * Creates a lock for a specific job
      */
     public function lock(string $jobId, int $ttl = 60): bool
     {
@@ -247,7 +248,7 @@ class Redis implements Client
     }
 
     /**
-     * Remove o bloqueio de um job
+     * Removes the lock from a job
      */
     public function unlock(string $jobId): bool
     {
@@ -256,7 +257,7 @@ class Redis implements Client
     }
 
     /**
-     * Marca um job como concluído
+     * Marks a job as completed
      */
     public function markAsCompleted(JobEntity $job, ?string $result = null): bool
     {
@@ -269,17 +270,42 @@ class Redis implements Client
     }
 
     /**
-     * Marca um job como falho
+     * Marks a job as failed
      */
     public function markAsFailed(JobEntity $job, string $error): bool
     {
         $job->setStatus('failed');
         $job->setError($error);
         $this->storeJobDetails($job);
-        
+
         $failedQueueKey = $this->getKey('failed', 'default');
         $this->redis->lPush($failedQueueKey, $job->toJson());
-        
+
         return true;
+    }
+
+    /**
+     * Completely clears a specific queue
+     * 
+     * @param string $queue Name of the queue to be cleared
+     * @return int Number of jobs removed from the queue
+     */
+    public function clear(string $queue = "default"): int
+    {
+        try {
+            $queueKey = $this->getKey('queue', $queue);
+            $count = $this->redis->lLen($queueKey);
+
+            // Delete the queue key
+            $this->redis->del($queueKey);
+
+            // Also clear the scheduled queue
+            $scheduledQueueKey = $this->getKey('scheduled', $queue);
+            $this->redis->del($scheduledQueueKey);
+
+            return $count;
+        } catch (Exception $e) {
+            return 0;
+        }
     }
 }
