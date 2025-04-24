@@ -15,12 +15,15 @@ use NeoFramework\Core\Commands\Queue\Clear;
 use NeoFramework\Core\Commands\Queue\Show;
 use NeoFramework\Core\Commands\Queue\Work;
 use NeoFramework\Core\Functions;
+use NeoFramework\Core\Kernel;
 
 if (PHP_VERSION_ID < 80000) {
     echo "NeoFramework requires PHP8.0 or newer\n";
 
     exit(1);
 }
+
+Kernel::loadEnv();
 
 $logo = "
 =============================================================================================
