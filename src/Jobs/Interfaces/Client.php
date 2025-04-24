@@ -16,6 +16,6 @@ interface Client
     public function scheduleJob(JobEntity $job, string $queue = "default"): bool;
     public function getDueJobs(string $queue = "default"): array;
     public function migrateScheduledJobs(string $queue = "default"): int;
-    public function markAsCompleted(JobEntity $job, ?string $result = null): bool;
-    public function markAsFailed(JobEntity $job, string $error): bool;
+    public function markAsCompleted(JobEntity $job,?string $result = null): bool;
+    public function markAsFailed(JobEntity $job, string $error,string $queue = "default"): bool;
 }

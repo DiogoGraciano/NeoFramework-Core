@@ -4,7 +4,9 @@ namespace Tests;
 
 use DateTime;
 use Exception;
+use NeoFramework\Core\Jobs\Interfaces\Client;
 use NeoFramework\Core\Jobs\Drivers\Redis;
+use NeoFramework\Core\Jobs\Drivers\Files;
 use NeoFramework\Core\Jobs\Entity\JobEntity;
 use NeoFramework\Core\Jobs\JobProcessor;
 use NeoFramework\Core\Jobs\QueueManager;
@@ -18,24 +20,46 @@ use Tests\JobsClass\TestJob;
  */
 class NeoFrameworkJobsTest extends TestCase
 {
-    private Redis $redisDriver;
-    private $redisDriverMock;
+    private Client $driver;
+    private $driverMock;
     private $processor;
     private string $testPrefix = 'test:neoframework:jobs:';
+    private string $driverType = 'redis'; // Can be 'redis' or 'files'
 
     /**
      * @before
      */
     protected function setUp(): void
     {
-        // Setup for tests using mocks
-        $this->redisDriverMock = $this->createMock(Redis::class);
-        $this->processor = new JobProcessor($this->redisDriverMock);
+        // Get driver type from environment or use default (redis)
+        $this->driverType = env('QUEUE_DRIVER') ?? "files";
 
-        // Setup for Redis integration tests
+        // Setup for tests using mocks
+        $this->driverMock = $this->createMock(Client::class);
+        $this->processor = new JobProcessor($this->driverMock);
+
+        // Setup for integration tests
         try {
-            $this->redisDriver = new Redis();
-            $this->cleanupRedisBeforeTest();
+            if ($this->driverType === 'redis') {
+                // Create Redis driver
+                $config = [
+                    'prefix' => $this->testPrefix,
+                    'host' => env("REDIS_HOST"),
+                    'port' => env("REDIS_PORT"),
+                    'password' => env("REDIS_PASSWORD")
+                ];
+                
+                $this->driver = new Redis($config);
+                $this->cleanupRedisBeforeTest();
+            } else {
+                // Create files driver
+                $config = [
+                    'prefix' => 'test_'
+                ];
+                
+                $this->driver = new Files($config);
+                $this->cleanupFileJsonBeforeTest(env("JOBS_STORAGE_PATH"));
+            }
         } catch (\Exception $e) {
             // Ignore errors here, only integration tests will be skipped
         }
@@ -46,6 +70,10 @@ class NeoFrameworkJobsTest extends TestCase
      */
     private function cleanupRedisBeforeTest(): void
     {
+        if ($this->driverType !== 'redis') {
+            return;
+        }
+
         // Connect directly to Redis to clean keys
         $host = env("REDIS_HOST");
         $port = env("REDIS_PORT");
@@ -75,13 +103,62 @@ class NeoFrameworkJobsTest extends TestCase
     }
 
     /**
+     * Cleans all FileJson test files before each test
+     */
+    private function cleanupFileJsonBeforeTest(string $tempDir): void
+    {
+        if ($this->driverType !== 'files') {
+            return;
+        }
+
+        // If directory exists, recursively remove all files
+        if (file_exists($tempDir)) {
+            $this->recursiveRemoveDirectory($tempDir);
+        }
+        
+        // Recreate the directory
+        mkdir($tempDir, 0755, true);
+    }
+
+    /**
+     * Recursively remove a directory and its contents
+     */
+    private function recursiveRemoveDirectory(string $directory): void
+    {
+        if (!is_dir($directory)) {
+            return;
+        }
+        
+        $items = scandir($directory);
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            
+            $path = $directory . '/' . $item;
+            if (is_dir($path)) {
+                $this->recursiveRemoveDirectory($path);
+            } else {
+                unlink($path);
+            }
+        }
+        
+        rmdir($directory);
+    }
+
+    /**
      * @after
      */
     protected function tearDown(): void
     {
-        // Clean all keys after tests as well
+        // Clean all data after tests as well
         try {
-            $this->cleanupRedisBeforeTest();
+            if ($this->driverType === 'redis') {
+                $this->cleanupRedisBeforeTest();
+            } else {
+                // For files, the temp directory will be removed automatically
+                // when the test framework exits
+            }
         } catch (Exception $e) {
             // Ignore errors here, only integration tests were affected
         }
@@ -174,21 +251,21 @@ class NeoFrameworkJobsTest extends TestCase
         $this->assertFalse($job3->isDue());
     }
 
-    // ===== REDIS DRIVER TESTS =====
+    // ===== DRIVER TESTS =====
 
     public function testEnqueueAddsJobToQueue(): void
     {
         try {
             $job = new JobEntity('TestJob', ['arg1', 'arg2'], null);
 
-            $result = $this->redisDriver->enqueue($job);
-            $size = $this->redisDriver->size();
+            $result = $this->driver->enqueue($job);
+            $size = $this->driver->size();
 
             $this->assertTrue($result);
             $this->assertEquals(1, $size, 'Queue should contain 1 job after enqueuing');
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -198,20 +275,20 @@ class NeoFrameworkJobsTest extends TestCase
         try {
             $job = new JobEntity('TestJob', ['arg1', 'arg2'], new DateTime('+1 hour'));
 
-            $result = $this->redisDriver->scheduleJob($job);
+            $result = $this->driver->scheduleJob($job);
 
             $this->assertTrue($result);
 
             // Check if job is in scheduled queue
-            $dueJobs = $this->redisDriver->getDueJobs();
+            $dueJobs = $this->driver->getDueJobs();
             $this->assertCount(0, $dueJobs, 'Should have no due jobs now (job was scheduled for the future)');
 
             // Check if job details can be found
-            $jobs = $this->redisDriver->getJobs();
+            $jobs = $this->driver->getJobs();
             $this->assertCount(0, $jobs, 'Should have no jobs in main queue');
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -221,14 +298,14 @@ class NeoFrameworkJobsTest extends TestCase
         try {
             // Create and enqueue a job
             $job = new JobEntity('TestJob', ['arg1', 'arg2'], null);
-            $this->redisDriver->enqueue($job);
+            $this->driver->enqueue($job);
 
             // Check if there's 1 job in the queue
-            $sizeBefore = $this->redisDriver->size();
+            $sizeBefore = $this->driver->size();
             $this->assertEquals(1, $sizeBefore, 'Queue should contain 1 job before dequeuing');
 
             // Dequeue the job
-            $dequeued = $this->redisDriver->dequeue();
+            $dequeued = $this->driver->dequeue();
 
             // Check returned job details
             $this->assertInstanceOf(JobEntity::class, $dequeued);
@@ -237,11 +314,11 @@ class NeoFrameworkJobsTest extends TestCase
             $this->assertEquals('processing', $dequeued->getStatus());
 
             // Check if job was removed from queue
-            $sizeAfter = $this->redisDriver->size();
+            $sizeAfter = $this->driver->size();
             $this->assertEquals(0, $sizeAfter, 'Queue should be empty after dequeuing');
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -255,29 +332,29 @@ class NeoFrameworkJobsTest extends TestCase
             $job2 = new JobEntity('TestJob2', ['arg2'], $pastDate);
 
             // Schedule jobs (which are in the past)
-            $this->redisDriver->scheduleJob($job1);
-            $this->redisDriver->scheduleJob($job2);
+            $this->driver->scheduleJob($job1);
+            $this->driver->scheduleJob($job2);
 
             // Check main queue before migration
-            $sizeBefore = $this->redisDriver->size();
+            $sizeBefore = $this->driver->size();
             $this->assertEquals(0, $sizeBefore, 'Main queue should be empty before migration');
 
             // Migrate jobs
-            $count = $this->redisDriver->migrateScheduledJobs();
+            $count = $this->driver->migrateScheduledJobs();
 
             // Check if two jobs were migrated
             $this->assertEquals(2, $count, 'Two jobs should have been migrated');
 
             // Check main queue after migration
-            $sizeAfter = $this->redisDriver->size();
+            $sizeAfter = $this->driver->size();
             $this->assertEquals(2, $sizeAfter, 'Main queue should contain 2 jobs after migration');
 
             // Check if scheduled queue is empty
-            $dueJobs = $this->redisDriver->getDueJobs();
+            $dueJobs = $this->driver->getDueJobs();
             $this->assertCount(0, $dueJobs, 'Scheduled queue should be empty after migration');
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -288,15 +365,15 @@ class NeoFrameworkJobsTest extends TestCase
             $jobId = 'job_' . uniqid();
 
             // Create a lock
-            $result = $this->redisDriver->lock($jobId);
+            $result = $this->driver->lock($jobId);
             $this->assertTrue($result, 'Should be able to create a lock for the job');
 
             // Try to create a second lock (which should fail)
-            $secondLock = $this->redisDriver->lock($jobId);
+            $secondLock = $this->driver->lock($jobId);
             $this->assertFalse($secondLock, 'Should not be able to create a second lock for the same job');
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -307,18 +384,18 @@ class NeoFrameworkJobsTest extends TestCase
             $jobId = 'job_' . uniqid();
 
             // Create a lock
-            $this->redisDriver->lock($jobId);
+            $this->driver->lock($jobId);
 
             // Remove the lock
-            $result = $this->redisDriver->unlock($jobId);
+            $result = $this->driver->unlock($jobId);
             $this->assertTrue($result, 'Should be able to remove the lock');
 
             // Check if can create a new lock after removal
-            $newLock = $this->redisDriver->lock($jobId);
+            $newLock = $this->driver->lock($jobId);
             $this->assertTrue($newLock, 'Should be able to create a new lock after removing the previous one');
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -327,7 +404,7 @@ class NeoFrameworkJobsTest extends TestCase
     {
         try {
             // Initially, queue should be empty
-            $size = $this->redisDriver->size();
+            $size = $this->driver->size();
             $this->assertEquals(0, $size, 'Queue should be empty initially');
 
             // Add 3 jobs
@@ -335,16 +412,16 @@ class NeoFrameworkJobsTest extends TestCase
             $job2 = new JobEntity('TestJob2', [], null);
             $job3 = new JobEntity('TestJob3', [], null);
 
-            $this->redisDriver->enqueue($job1);
-            $this->redisDriver->enqueue($job2);
-            $this->redisDriver->enqueue($job3);
+            $this->driver->enqueue($job1);
+            $this->driver->enqueue($job2);
+            $this->driver->enqueue($job3);
 
             // Check queue size
-            $size = $this->redisDriver->size();
+            $size = $this->driver->size();
             $this->assertEquals(3, $size, 'Queue should contain 3 jobs');
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -356,11 +433,11 @@ class NeoFrameworkJobsTest extends TestCase
             $job1 = new JobEntity('TestJob1', ['arg1'], null);
             $job2 = new JobEntity('TestJob2', ['arg2'], null);
 
-            $this->redisDriver->enqueue($job1);
-            $this->redisDriver->enqueue($job2);
+            $this->driver->enqueue($job1);
+            $this->driver->enqueue($job2);
 
             // Get jobs
-            $jobs = $this->redisDriver->getJobs();
+            $jobs = $this->driver->getJobs();
 
             // Check if returned 2 jobs
             $this->assertCount(2, $jobs, 'Should return 2 jobs');
@@ -372,7 +449,7 @@ class NeoFrameworkJobsTest extends TestCase
             $this->assertContains('TestJob2', $classes);
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -382,28 +459,28 @@ class NeoFrameworkJobsTest extends TestCase
         try {
             // Create and dequeue a job
             $job = new JobEntity('TestJob', ['arg1'], null);
-            $this->redisDriver->enqueue($job);
-            $job = $this->redisDriver->dequeue();
+            $this->driver->enqueue($job);
+            $job = $this->driver->dequeue();
 
             // Check if queue is empty
-            $sizeBefore = $this->redisDriver->size();
+            $sizeBefore = $this->driver->size();
             $this->assertEquals(0, $sizeBefore, 'Queue should be empty after dequeuing');
 
             // Retry the job
-            $result = $this->redisDriver->retry($job, 'default', 2);
+            $result = $this->driver->retry($job, 'default', 2);
             $this->assertTrue($result, 'Should be able to retry the job');
 
             // Check if job was added back to queue
-            $sizeAfter = $this->redisDriver->size();
+            $sizeAfter = $this->driver->size();
             $this->assertEquals(1, $sizeAfter, 'Queue should contain 1 job after retrying');
 
             // Check retried job details
-            $retriedJob = $this->redisDriver->dequeue();
+            $retriedJob = $this->driver->dequeue();
             $this->assertEquals('TestJob', $retriedJob->getClass());
             $this->assertEquals(2, $retriedJob->getAttempts(), 'Job should have 2 attempts');
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -416,17 +493,17 @@ class NeoFrameworkJobsTest extends TestCase
             $job = new JobEntity('TestJob', ['arg1'], $pastDate);
 
             // Schedule the job
-            $this->redisDriver->scheduleJob($job);
+            $this->driver->scheduleJob($job);
 
             // Get due jobs
-            $dueJobs = $this->redisDriver->getDueJobs();
+            $dueJobs = $this->driver->getDueJobs();
 
             // Check if returned 1 job
             $this->assertCount(1, $dueJobs, 'Should return 1 due job');
             $this->assertEquals('TestJob', $dueJobs[0]->getClass());
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -436,18 +513,18 @@ class NeoFrameworkJobsTest extends TestCase
         try {
             // Create and enqueue a job
             $job = new JobEntity('TestJob', ['arg1'], null);
-            $this->redisDriver->enqueue($job);
-            $job = $this->redisDriver->dequeue();
+            $this->driver->enqueue($job);
+            $job = $this->driver->dequeue();
 
             // Mark job as completed
-            $result = $this->redisDriver->markAsCompleted($job, 'Job result');
+            $result = $this->driver->markAsCompleted($job, 'Job result');
             $this->assertTrue($result, 'Should be able to mark job as completed');
 
             // Note: We would need to add a method to retrieve specific job details
             // or check in a real database
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -457,17 +534,17 @@ class NeoFrameworkJobsTest extends TestCase
         try {
             // Create and enqueue a job
             $job = new JobEntity('TestJob', ['arg1'], null);
-            $this->redisDriver->enqueue($job);
-            $job = $this->redisDriver->dequeue();
+            $this->driver->enqueue($job);
+            $job = $this->driver->dequeue();
 
             // Mark job as failed
-            $result = $this->redisDriver->markAsFailed($job, 'Test error');
+            $result = $this->driver->markAsFailed($job, 'Test error');
             $this->assertTrue($result, 'Should be able to mark job as failed');
 
             // Note: We would need to add additional methods to check the failed queue
         } catch (Exception $e) {
             $this->markTestSkipped(
-                'Could not connect to Redis server: ' . $e->getMessage()
+                'Could not connect to driver: ' . $e->getMessage()
             );
         }
     }
@@ -479,17 +556,17 @@ class NeoFrameworkJobsTest extends TestCase
         $job = new JobEntity(TestJob::class, ['test'], null);
 
         // Configure mock for lock method
-        $this->redisDriverMock->expects($this->once())
+        $this->driverMock->expects($this->once())
             ->method('lock')
             ->willReturn(true);
 
         // Configure mock for markAsCompleted method
-        $this->redisDriverMock->expects($this->once())
+        $this->driverMock->expects($this->once())
             ->method('markAsCompleted')
             ->willReturn(true);
 
         // Configure mock for unlock method
-        $this->redisDriverMock->expects($this->once())
+        $this->driverMock->expects($this->once())
             ->method('unlock')
             ->willReturn(true);
 
@@ -502,7 +579,7 @@ class NeoFrameworkJobsTest extends TestCase
         $job = new JobEntity('UnregisteredJob', [], null);
 
         // Configure mock for markAsFailed method
-        $this->redisDriverMock->expects($this->once())
+        $this->driverMock->expects($this->once())
             ->method('markAsFailed')
             ->willReturn(true);
 
@@ -515,17 +592,17 @@ class NeoFrameworkJobsTest extends TestCase
         $job = new JobEntity(FailingJob::class, [], null);
 
         // Configure mock for lock method
-        $this->redisDriverMock->expects($this->once())
+        $this->driverMock->expects($this->once())
             ->method('lock')
             ->willReturn(true);
 
         // Configure mock for retry or markAsFailed method
-        $this->redisDriverMock->expects($this->once())
+        $this->driverMock->expects($this->once())
             ->method('retry')
             ->willReturn(true);
 
         // Configure mock for unlock method
-        $this->redisDriverMock->expects($this->once())
+        $this->driverMock->expects($this->once())
             ->method('unlock')
             ->willReturn(true);
 
@@ -540,17 +617,17 @@ class NeoFrameworkJobsTest extends TestCase
         $this->processor->setMaxAttempts(3); // Maximum of 3 attempts
 
         // Configure mock for lock method
-        $this->redisDriverMock->expects($this->once())
+        $this->driverMock->expects($this->once())
             ->method('lock')
             ->willReturn(true);
 
         // Configure mock for markAsFailed method
-        $this->redisDriverMock->expects($this->once())
+        $this->driverMock->expects($this->once())
             ->method('markAsFailed')
             ->willReturn(true);
 
         // Configure mock for unlock method
-        $this->redisDriverMock->expects($this->once())
+        $this->driverMock->expects($this->once())
             ->method('unlock')
             ->willReturn(true);
 
@@ -568,14 +645,15 @@ class NeoFrameworkJobsTest extends TestCase
         $property->setAccessible(true);
         $property->setValue(null, null);
 
-        // Set up mock env function
+        // Set up mock env function if it doesn't exist
         if (!function_exists('env')) {
             function env($key, $default = null)
             {
                 $values = [
-                    'QUEUE_DRIVER' => 'redis',
+                    'QUEUE_DRIVER' => 'redis',  // Could be 'redis' or 'files'
                     'REDIS_HOST' => 'localhost',
-                    'REDIS_PORT' => 6379
+                    'REDIS_PORT' => 6379,
+                    'JOBS_STORAGE_PATH' => sys_get_temp_dir() . '/neoframeworkjobs_test'
                 ];
                 return $values[$key] ?? $default;
             }
@@ -585,12 +663,12 @@ class NeoFrameworkJobsTest extends TestCase
         $this->assertInstanceOf(QueueManager::class, $instance);
 
         $client = $instance->getClient();
-        $this->assertInstanceOf(Redis::class, $client);
+        $this->assertInstanceOf(Client::class, $client);
     }
 
     public function testCanSetClient(): void
     {
-        $mockClient = $this->createMock(Redis::class);
+        $mockClient = $this->createMock(Client::class);
 
         $queueManager = QueueManager::getInstance();
         $queueManager->setClient($mockClient);
@@ -624,10 +702,10 @@ class NeoFrameworkJobsTest extends TestCase
         $property->setValue(null, null);
 
         $queueManager = QueueManager::getInstance();
-        $queueManager->setClient($this->redisDriverMock);
+        $queueManager->setClient($this->driverMock);
 
         // Configure mock for enqueue method
-        $this->redisDriverMock->expects($this->once())
+        $this->driverMock->expects($this->once())
             ->method('enqueue')
             ->with(
                 $this->callback(function ($job) use ($className) {

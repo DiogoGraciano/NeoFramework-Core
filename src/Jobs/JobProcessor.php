@@ -29,12 +29,12 @@ class JobProcessor
     /**
      * Processa um único job
      */
-    public function processJob(JobEntity $job): bool
+    public function processJob(JobEntity $job,string $queue = "default"): bool
     {
         $class = $job->getClass();
         
         if (!\is_subclass_of($class, "NeoFramework\Core\Abstract\Job")) {
-            $this->client->markAsFailed($job, "Job class '{$class}' not extends NeoFramework\Core\Abstract\Job");
+            $this->client->markAsFailed($job, "Job class '{$class}' not extends NeoFramework\Core\Abstract\Job",$queue);
             return false;
         }
         
@@ -47,7 +47,7 @@ class JobProcessor
             
             $result = call_user_func_array([$jobInstance, 'handle'],[]);
             
-            $this->client->markAsCompleted($job, is_string($result) ? $result : null);
+            $this->client->markAsCompleted($job,is_string($result) ? $result : null);
             
             $this->client->unlock($job->getId());
             
@@ -56,7 +56,7 @@ class JobProcessor
             if ($job->getAttempts() < $this->maxAttempts) {
                 $this->client->retry($job);
             } else {
-                $this->client->markAsFailed($job, $e->getMessage());
+                $this->client->markAsFailed($job, $e->getMessage(),$queue);
             }
 
             $this->client->unlock($job->getId());
@@ -75,7 +75,7 @@ class JobProcessor
             $job = $this->client->dequeue($queue);
             
             if ($job) {
-                $this->processJob($job);
+                $this->processJob($job,$queue);
             } else {
                 sleep($sleep);
             }

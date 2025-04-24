@@ -10,7 +10,6 @@ if (\file_exists(__DIR__ . '/../../../autoload.php')) {
 }
 
 use NeoFramework\Core\Commands\Build;
-use NeoFramework\Core\Commands\Jobs;
 use NeoFramework\Core\Commands\Migrate;
 use NeoFramework\Core\Commands\Queue\Clear;
 use NeoFramework\Core\Commands\Queue\Show;

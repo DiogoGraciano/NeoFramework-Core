@@ -259,7 +259,7 @@ class Redis implements Client
     /**
      * Marks a job as completed
      */
-    public function markAsCompleted(JobEntity $job, ?string $result = null): bool
+    public function markAsCompleted(JobEntity $job,?string $result = null): bool
     {
         $job->setStatus('completed');
         if ($result) {
@@ -272,13 +272,13 @@ class Redis implements Client
     /**
      * Marks a job as failed
      */
-    public function markAsFailed(JobEntity $job, string $error): bool
+    public function markAsFailed(JobEntity $job, string $error,string $queue = "default"): bool
     {
         $job->setStatus('failed');
         $job->setError($error);
         $this->storeJobDetails($job);
 
-        $failedQueueKey = $this->getKey('failed', 'default');
+        $failedQueueKey = $this->getKey('failed',$queue);
         $this->redis->lPush($failedQueueKey, $job->toJson());
 
         return true;

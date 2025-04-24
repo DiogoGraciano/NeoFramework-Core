@@ -9,7 +9,8 @@
         </testsuite>
     </testsuites>
     <php>
-        <env name="QUEUE_DRIVER" value="redis"/>
+        <env name="JOBS_STORAGE_PATH" value="Jobs_Test"/>
+        <env name="QUEUE_DRIVER" value="files"/>
         <env name="REDIS_HOST" value="redis"/>
         <env name="REDIS_PORT" value="6379"/>
         <env name="REDIS_PASSWORD" value="RedisPass"/>
