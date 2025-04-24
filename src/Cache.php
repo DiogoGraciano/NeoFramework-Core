@@ -51,7 +51,7 @@ final class Cache {
         }
 
         try {
-            $password = env("MEMCACHED_USER").":".env("MEMCACHED_PASS")."@";
+            $password = env("MEMCACHED_USER").":".env("MEMCACHED_PASSWORD")."@";
 
             if($password == ":@")
                 $password = "";
