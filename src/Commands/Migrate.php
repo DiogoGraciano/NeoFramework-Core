@@ -22,7 +22,7 @@ class Migrate extends Command
         $color = new Color;
 
         try{
-            (new MigrationsMigrate)->execute(is_null($recreate));
+            (new MigrationsMigrate)->execute(!is_null($recreate));
 
             if(env("ENVIRONMENT") != "prod"){
                 (new GeneretePhpDoc)->execute();
