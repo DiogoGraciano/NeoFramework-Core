@@ -25,17 +25,17 @@ class Scheduler
 
     public static function call(callable $fn,array $args = [],?string $id = null):Job
     {
-        return self::$instance->call($fn,$args,$id);
+        return self::getInstance()->call($fn,$args,$id);
     }
 
     public static function php(string $script,?string $bin = null,array $args = [],?string $id = null):Job
     {
-        return self::$instance->php($script,$bin,$args,$id);
+        return self::getInstance()->php($script,$bin,$args,$id);
     }
 
     public static function raw(string $command,array $args = [],?string $id = null):Job
     {
-        return self::$instance->raw($command,$args,$id);
+        return self::getInstance()->raw($command,$args,$id);
     }
 
     public static function run(?DateTime $runTime = null):array
@@ -47,6 +47,6 @@ class Scheduler
             throw new \Exception("The run method can only be called by the schedule:work command.");
         }
 
-        return self::$instance->run($runTime);
+        return self::getInstance()->run($runTime);
     }
 }
