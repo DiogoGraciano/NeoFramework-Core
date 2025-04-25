@@ -64,7 +64,7 @@ final class Router{
 
     private function controllerHome(){
         if (!$this->controllerExist('home')){
-            throw new Exception("A Pagina que está procurando não existe",404);
+            throw new Exception("The page you are looking for does not exist.",404);
         }
       
         return $this->instatiateController();
@@ -72,7 +72,7 @@ final class Router{
 
     private function controllerSet($controller){
         if (!$this->controllerExist($controller)){
-            throw new Exception("A Pagina que está procurando não existe",404);
+            throw new Exception("The page you are looking for does not exist.",404);
         }
         
         return $this->instatiateController();
@@ -82,7 +82,7 @@ final class Router{
         $controller = $this->getControllerNotHome();
 
         if (!$this->controllerExist($controller)){
-            throw new Exception("A Pagina que está procurando não existe",404);
+            throw new Exception("The page you are looking for does not exist.",404);
         }
         
         return $this->instatiateController();
@@ -165,7 +165,7 @@ final class Router{
         }    
 
         if(!$routeAttribute){
-            throw new Exception("A Pagina que está procurando não existe",404);
+            throw new Exception("The page you are looking for does not exist.",404);
         }
 
         $methodName = $method->getName();
@@ -190,7 +190,7 @@ final class Router{
         $response = $controller->$methodName(...$parameters);
 
         if(!is_a($response,"NeoFramework\Core\Response"))
-            throw new Exception("O retorno de um metodo do controller deve ser a instância do do metodo Response");
+            throw new Exception("The return of a controller method must be an instance of the Response method.");
 
         if($middlewareAttribute){
             $response = $middlewareAttribute->handleAfter($response);
@@ -228,14 +228,14 @@ final class Router{
                     if(preg_match($var,$parameter[$key]))
                         $parametersFinal[] = $parameter[$key];
                     else
-                        throw new Exception(($key+1)."° Parametro é invalido",500);
+                        throw new Exception(($key+1)."° parameter is invalid.",500);
                 }
                 else{
-                    throw new Exception(($key+1)."° Parametro é invalido",500);
+                    throw new Exception(($key+1)."° parameter is invalid.",500);
                 }
             }
             elseif($required){
-                throw new Exception(($key+1)."° Parametro é invalido",500);
+                throw new Exception(($key+1)."° parameter is invalid.",500);
             }
         }
 

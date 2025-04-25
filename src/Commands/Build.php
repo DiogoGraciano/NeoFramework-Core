@@ -30,6 +30,7 @@ class Build extends Command
 
             if(!file_exists(Functions::getRoot()."Config".DIRECTORY_SEPARATOR."bundler.config.php")){
                 echo $color->error("Config file not found in ".Functions::getRoot()."Config".DIRECTORY_SEPARATOR."bundler.config.php");
+                return;
             }
 
             $config = include Functions::getRoot()."Config".DIRECTORY_SEPARATOR."bundler.config.php";

@@ -18,7 +18,7 @@ final class Request
         $callerClass = $backtrace[1]['class'] ?? null;
 
         if ($callerClass !== Router::class) {
-            throw new \Exception("A classe Request só pode ser instanciada pela classe Router.");
+            throw new \Exception("The Request class can only be instantiated by the Router class.");
         }
 
         $this->get = $_GET;
