@@ -12,7 +12,7 @@ class Run extends Command
 {
     public function __construct()
     {   
-        parent::__construct("schedule:work","Start processing schedule");
+        parent::__construct("schedule:run","Start processing schedule");
         
         $this->version("1.0");
     }
