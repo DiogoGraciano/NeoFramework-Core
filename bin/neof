@@ -14,6 +14,7 @@ use NeoFramework\Core\Commands\Migrate;
 use NeoFramework\Core\Commands\Queue\Clear;
 use NeoFramework\Core\Commands\Queue\Show;
 use NeoFramework\Core\Commands\Queue\Work;
+use NeoFramework\Core\Commands\Schedule\Run;
 use NeoFramework\Core\Commands\Schedule\Work as ScheduleWork;
 use NeoFramework\Core\Functions;
 use NeoFramework\Core\Kernel;
@@ -48,6 +49,7 @@ $app->add(new Build, 'bu');
 $app->add(new Work, 'qw');
 $app->add(new Show,"qs");
 $app->add(new Clear,"qc");
+$app->add(new Run,"sr");
 $app->add(new ScheduleWork,"sw");
 
 $class = [];

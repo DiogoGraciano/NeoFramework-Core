@@ -24,6 +24,7 @@ class Work extends Command
             $queue = "default";
         }
 
+        echo $color->info("Queue Work started").PHP_EOL;
         try{
             (new JobProcessor(QueueManager::getInstance()->getClient()))->work($queue);
         }

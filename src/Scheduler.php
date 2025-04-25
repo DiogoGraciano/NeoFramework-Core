@@ -5,6 +5,7 @@ namespace NeoFramework\Core;
 use DateTime;
 use GO\Job;
 use GO\Scheduler as GOScheduler;
+use NeoFramework\Core\Commands\Schedule\Run;
 use NeoFramework\Core\Commands\Schedule\Work;
 
 class Scheduler
@@ -43,10 +44,22 @@ class Scheduler
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
         $callerClass = $backtrace[1]['class'] ?? null;
 
+        if ($callerClass !== Run::class) {
+            throw new \Exception("The run method can only be called by the schedule:run command.");
+        }
+
+        return self::getInstance()->run($runTime);
+    }
+
+    public static function work(array $seconds = [0]):void
+    {
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+        $callerClass = $backtrace[1]['class'] ?? null;
+
         if ($callerClass !== Work::class) {
             throw new \Exception("The run method can only be called by the schedule:work command.");
         }
 
-        return self::getInstance()->run($runTime);
+        self::getInstance()->work($seconds);
     }
 }

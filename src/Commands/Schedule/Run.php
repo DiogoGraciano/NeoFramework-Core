@@ -8,7 +8,7 @@ use Exception;
 use NeoFramework\Core\Functions;
 use NeoFramework\Core\Scheduler;
 
-class Work extends Command
+class Run extends Command
 {
     public function __construct()
     {   
@@ -28,9 +28,7 @@ class Work extends Command
 
             require_once Functions::getRoot()."schedule.php";
 
-            echo $color->info("Schedule Work started").PHP_EOL;
-
-            Scheduler::work();
+            echo $color->ok(json_encode(Scheduler::run(),JSON_PRETTY_PRINT)).PHP_EOL;
         }
         catch(Exception $e){
             echo $color->error($e->getMessage().PHP_EOL.$e->getTraceAsString());
