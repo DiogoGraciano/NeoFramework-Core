@@ -98,23 +98,54 @@ final class Router{
     }
 
     private function controllerExist($controller){
-    
-        if(in_array($controller,$this->routesRewrite) && class_exists($this->routesRewrite[$controller])){
-            $this->namespace =  (new \ReflectionClass($this->routesRewrite[$controller]))->getNamespaceName();
-            $this->controller = $controller; 
+        if ($this->checkRouteRewrite($controller)) {
             return true;
         }
 
-        $controller = ucfirst($controller);
+        return $this->findControllerInFolders($controller);
+    }
 
-        foreach ($this->folders as $folder){
-            if((class_exists($folder."\\".$controller) || class_exists($folder."\\".$controller."Controller")) && is_subclass_of($folder."\\".$controller,"NeoFramework\Core\Abstract\Controller")){
-                $this->namespace = $folder;
-                $this->controller = $controller; 
-                return true;
+    private function checkRouteRewrite($controller): bool
+    {
+        if (!in_array($controller, $this->routesRewrite)) {
+            return false;
+        }
+
+        $rewriteClass = $this->routesRewrite[$controller];
+        if (!class_exists($rewriteClass)) {
+            return false;
+        }
+
+        $this->namespace = (new \ReflectionClass($rewriteClass))->getNamespaceName();
+        $this->controller = $controller;
+        return true;
+    }
+
+    private function findControllerInFolders($controller): bool
+    {
+        $controllerName = ucfirst($controller);
+
+        foreach ($this->folders as $folder) {
+            $possibleControllers = [
+                $folder . '\\' . $controllerName,
+                $folder . '\\' . $controllerName . 'Controller'
+            ];
+
+            foreach ($possibleControllers as $fullClassName) {
+                if ($this->isValidController($fullClassName)) {
+                    $this->namespace = $folder;
+                    $this->controller = basename(str_replace('\\', '/', $fullClassName));
+                    return true;
+                }
             }
         }
+
         return false;
+    }
+
+    private function isValidController($className): bool
+    {
+        return class_exists($className) && is_subclass_of($className, 'NeoFramework\Core\Abstract\Controller');
     }
     
     private function instatiateController(){
