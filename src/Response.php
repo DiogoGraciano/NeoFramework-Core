@@ -140,6 +140,11 @@ final class Response
         return $this->content;
     }
 
+    public function getContent():string
+    {
+        return implode('', $this->content);
+    }
+
     public function send()
     {
         if ($this->isSent) {

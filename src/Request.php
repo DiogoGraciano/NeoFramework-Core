@@ -2,30 +2,26 @@
 
 namespace NeoFramework\Core;
 
+use SimpleXMLElement;
 use SplFileObject;
 
 final class Request
 {
-    private readonly array $get;
-    private readonly array $post;
-    private readonly array $cookie;
-    private readonly array $server;
-    private readonly array $files;
+    private array $get;
+    private array $post;
+    private array $cookie;
+    private array $server;
+    private array $files;
+    private string|null|false $body;
 
     public function __construct()
     {
-        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
-        $callerClass = $backtrace[1]['class'] ?? null;
-
-        if ($callerClass !== Router::class) {
-            throw new \Exception("The Request class can only be instantiated by the Router class.");
-        }
-
-        $this->get = $_GET;
-        $this->post = $_POST;
-        $this->cookie = $_COOKIE;
-        $this->server = $_SERVER;
-        $this->files = $_FILES;
+        $this->get = &$_GET;
+        $this->post = &$_POST;
+        $this->cookie = &$_COOKIE;
+        $this->server = &$_SERVER;
+        $this->files = &$_FILES;
+        $this->body = file_get_contents('php://input');
     }
 
     public static function isXmlHttpRequest(): bool
@@ -37,17 +33,32 @@ final class Request
     public static function getAllHeaders(): array
     {
         $headers = [];
-        foreach ($_SERVER as $name => $value) {
-            if (substr($name, 0, 5) == 'HTTP_') {
-                $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+        
+        if (function_exists('getallheaders')) {
+            $headers = getallheaders();
+        } else {
+            foreach ($_SERVER as $name => $value) {
+                if (str_starts_with($name, 'HTTP_')) {
+                    $headerName = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))));
+                    $headers[$headerName] = $value;
+                }
             }
         }
+
+        $specialHeaders = ['CONTENT_TYPE', 'CONTENT_LENGTH', 'CONTENT_MD5'];
+        foreach ($specialHeaders as $header) {
+            if (isset($_SERVER[$header])) {
+                $headerName = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', $header))));
+                $headers[$headerName] = $_SERVER[$header];
+            }
+        }
+
         return $headers;
     }
 
-    public function getMethod(): string
+    public function getHeader(string $name): ?string
     {
-        return $_SERVER['REQUEST_METHOD'];
+        return self::getAllHeaders()[$name] ?? null;
     }
 
     public function get(string $var,bool $sanitazed = true)
@@ -126,12 +137,32 @@ final class Request
 
     public function getBody(): string
     {
-        return file_get_contents('php://input') ?? "";
+        return $this->body ?? "";
+    }
+
+    public function setBody(string $body): void
+    {
+        $this->body = $body;
+    }
+
+    public function setBodyAsJson(array $json): void
+    {
+        $this->body = json_encode($json);
+    }
+
+    public function setBodyAsXml(SimpleXMLElement $xml): void
+    {
+        $this->body = $xml->asXML();
     }
 
     public function getBodyAsJson($asArray = false): mixed
     {
         return json_decode($this->getBody(), $asArray);
+    }
+
+    public function getBodyAsXml(): SimpleXMLElement|false
+    {
+        return simplexml_load_string($this->getBody());
     }
 
     public function all(): array
