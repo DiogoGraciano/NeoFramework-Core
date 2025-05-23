@@ -16,6 +16,7 @@ use NeoFramework\Core\Commands\Queue\Show;
 use NeoFramework\Core\Commands\Queue\Work;
 use NeoFramework\Core\Commands\Schedule\Run;
 use NeoFramework\Core\Commands\Schedule\Work as ScheduleWork;
+use NeoFramework\Core\Commands\Test;
 use NeoFramework\Core\Functions;
 use NeoFramework\Core\Kernel;
 
@@ -51,6 +52,7 @@ $app->add(new Show,"qs");
 $app->add(new Clear,"qc");
 $app->add(new Run,"sr");
 $app->add(new ScheduleWork,"sw");
+$app->add(new Test,"te");
 
 $class = [];
 $folder = Functions::getRoot() . "App/Commands";
