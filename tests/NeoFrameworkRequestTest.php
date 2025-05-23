@@ -48,8 +48,15 @@ class NeoFrameworkRequestTest extends TestCase
         $_SERVER['HTTP_ACCEPT'] = 'application/json';
         $_SERVER['CONTENT_TYPE'] = 'application/json';
 
+        //force the request to be a new instance because the static method getAllHeaders is used
+        $this->request = new Request();
+
         $this->assertEquals('application/json', $this->request->getHeader('Accept'));
         $this->assertEquals('application/json', $this->request->getHeader('Content-Type'));
+
+        $this->request->addHeader('Test', 'test');
+        $this->assertEquals('test', $this->request->getHeader('Test'));
+
         $this->assertNull($this->request->getHeader('NonExistent'));
     }
 

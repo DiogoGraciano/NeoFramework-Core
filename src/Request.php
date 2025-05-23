@@ -13,6 +13,7 @@ final class Request
     private array $server;
     private array $files;
     private string|null|false $body;
+    private array $headers;
 
     public function __construct()
     {
@@ -22,6 +23,7 @@ final class Request
         $this->server = &$_SERVER;
         $this->files = &$_FILES;
         $this->body = file_get_contents('php://input');
+        $this->headers = self::getAllHeaders();
     }
 
     public static function isXmlHttpRequest(): bool
@@ -56,9 +58,14 @@ final class Request
         return $headers;
     }
 
+    public function addHeader(string $name, string $value): void
+    {
+        $this->headers[$name] = $value;
+    }
+
     public function getHeader(string $name): ?string
     {
-        return self::getAllHeaders()[$name] ?? null;
+        return $this->headers[$name] ?? null;
     }
 
     public function get(string $var,bool $sanitazed = true)
