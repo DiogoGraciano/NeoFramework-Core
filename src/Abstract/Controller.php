@@ -1,8 +1,8 @@
 <?php
 namespace NeoFramework\Core\Abstract;
 
+use DI\Attribute\Inject;
 use NeoFramework\Core\Functions;
-use NeoFramework\Core\Url;
 use NeoFramework\Core\Request;
 use NeoFramework\Core\Response;
 
@@ -12,16 +12,27 @@ abstract class Controller
 
     protected readonly array $urlQuery;
 
+    #[Inject(Request::class)]
     protected Request $request;
 
+    #[Inject(Response::class)]
     protected Response $response;
 
     const validCsrfToken = true;
 
     public function __construct()
     {
-        $this->urlQuery = Url::getUriQueryArray();
-        $this->page = isset($this->urlQuery["page"])?intval($this->urlQuery["page"]):1;
+        if(!isset($this->request)){
+            $this->request = new Request();
+        }
+
+        if(!isset($this->response)){
+            $this->response = new Response();
+        }
+
+        $this->urlQuery = $this->request->getArray();
+        $this->page = $this->request->get("page") ?? 1;
+        
     }
 
     public function setResquest(Request $request){

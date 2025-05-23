@@ -17,9 +17,9 @@ final class Router{
 
     private array $routesRewrite = [];
 
-    private string $namespace;
+    private string $namespace = "";
 
-    private string $controller;
+    private string $controller = "";
 
     private Container $container;
 

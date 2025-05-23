@@ -13,6 +13,12 @@
         <testsuite name="NeoFrameworkResponseTest">
             <file>tests/NeoFrameworkResponseTest.php</file>
         </testsuite>
+        <testsuite name="NeoFrameworkControllerTest">
+            <file>tests/NeoFrameworkControllerTest.php</file>
+        </testsuite>
+        <testsuite name="NeoFrameworkRouterTest">
+            <file>tests/NeoFrameworkRouterTest.php</file>
+        </testsuite>
     </testsuites>
     <php>
         <env name="JOBS_STORAGE_PATH" value="Jobs_Test"/>
