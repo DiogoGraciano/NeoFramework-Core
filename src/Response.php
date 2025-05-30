@@ -148,7 +148,7 @@ final class Response
     public function send()
     {
         if ($this->isSent) {
-            throw new \Exception("A resposta já foi enviada.");
+            throw new \Exception("Response already sent");
         }
 
         foreach ($this->headers as $name => $values) {

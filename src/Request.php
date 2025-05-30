@@ -112,6 +112,11 @@ final class Request
             return null;
     }
 
+    public function getMethod():string|null
+    {
+        return $this->server("REQUEST_METHOD");
+    }
+
     public function getCsrfToken():null|string
     {
         return $this->post("CSRF_TOKEN") ?? $this->get("CSRF_TOKEN") ?? $this->server("X-CSRF-TOKEN");

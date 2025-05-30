@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="/var/www/html/phpunit.xml" tests="78" assertions="251" errors="0" failures="0" skipped="0" time="4.249610">
+    <testsuite name="NeoFramework Core Tests" tests="78" assertions="251" errors="0" failures="0" skipped="0" time="4.249610">
+      <testsuite name="Tests\NeoFrameworkControllerTest" file="/var/www/html/tests/NeoFrameworkControllerTest.php" tests="11" assertions="40" errors="0" failures="0" skipped="0" time="0.240781">
+        <testcase name="testConstructor" file="/var/www/html/tests/NeoFrameworkControllerTest.php" line="71" class="Tests\NeoFrameworkControllerTest" classname="Tests.NeoFrameworkControllerTest" assertions="4" time="0.127766"/>
+        <testcase name="testUrlQueryProperty" file="/var/www/html/tests/NeoFrameworkControllerTest.php" line="90" class="Tests\NeoFrameworkControllerTest" classname="Tests.NeoFrameworkControllerTest" assertions="5" time="0.026132"/>
+        <testcase name="testSetAndGetRequest" file="/var/www/html/tests/NeoFrameworkControllerTest.php" line="103" class="Tests\NeoFrameworkControllerTest" classname="Tests.NeoFrameworkControllerTest" assertions="4" time="0.014678"/>
+        <testcase name="testSetAndGetResponse" file="/var/www/html/tests/NeoFrameworkControllerTest.php" line="117" class="Tests\NeoFrameworkControllerTest" classname="Tests.NeoFrameworkControllerTest" assertions="4" time="0.000428"/>
+        <testcase name="testDefaultRequestAndResponse" file="/var/www/html/tests/NeoFrameworkControllerTest.php" line="131" class="Tests\NeoFrameworkControllerTest" classname="Tests.NeoFrameworkControllerTest" assertions="2" time="0.000382"/>
+        <testcase name="testGetOffset" file="/var/www/html/tests/NeoFrameworkControllerTest.php" line="138" class="Tests\NeoFrameworkControllerTest" classname="Tests.NeoFrameworkControllerTest" assertions="5" time="0.000735"/>
+        <testcase name="testGetLimit" file="/var/www/html/tests/NeoFrameworkControllerTest.php" line="162" class="Tests\NeoFrameworkControllerTest" classname="Tests.NeoFrameworkControllerTest" assertions="4" time="0.000654"/>
+        <testcase name="testIsMobile" file="/var/www/html/tests/NeoFrameworkControllerTest.php" line="173" class="Tests\NeoFrameworkControllerTest" classname="Tests.NeoFrameworkControllerTest" assertions="4" time="0.068526"/>
+        <testcase name="testValidCsrfTokenConstant" file="/var/www/html/tests/NeoFrameworkControllerTest.php" line="196" class="Tests\NeoFrameworkControllerTest" classname="Tests.NeoFrameworkControllerTest" assertions="1" time="0.000369"/>
+        <testcase name="testMethodChaining" file="/var/www/html/tests/NeoFrameworkControllerTest.php" line="201" class="Tests\NeoFrameworkControllerTest" classname="Tests.NeoFrameworkControllerTest" assertions="3" time="0.000501"/>
+        <testcase name="testControllerWithComplexPageScenarios" file="/var/www/html/tests/NeoFrameworkControllerTest.php" line="215" class="Tests\NeoFrameworkControllerTest" classname="Tests.NeoFrameworkControllerTest" assertions="4" time="0.000611"/>
+      </testsuite>
+      <testsuite name="Tests\NeoFrameworkJobsTest" file="/var/www/html/tests/NeoFrameworkJobsTest.php" tests="26" assertions="72" errors="0" failures="0" skipped="0" time="3.450224">
+        <testcase name="testJobEntityCanBeCreated" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="169" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="1" time="0.344862"/>
+        <testcase name="testJobEntityCanConvertToArray" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="175" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="4" time="0.064841"/>
+        <testcase name="testJobEntityCanConvertToJson" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="187" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="3" time="0.082528"/>
+        <testcase name="testJobEntityCanCreateFromArray" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="199" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="7" time="0.068186"/>
+        <testcase name="testJobEntityCanCreateFromJson" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="222" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="3" time="0.093465"/>
+        <testcase name="testJobEntityCanCheckIfJobIsDue" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="237" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="3" time="0.112488"/>
+        <testcase name="testEnqueueAddsJobToQueue" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="256" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="2" time="0.101843"/>
+        <testcase name="testScheduleJobAddsJobToScheduledQueue" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="273" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="3" time="0.127329"/>
+        <testcase name="testDequeueReturnsAndRemovesJobFromQueue" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="296" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="6" time="0.163979"/>
+        <testcase name="testMigrateScheduledJobsMovesJobsToMainQueue" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="326" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="4" time="0.398134"/>
+        <testcase name="testLockCreatesLockForJob" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="362" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="2" time="0.098194"/>
+        <testcase name="testUnlockRemovesLockForJob" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="381" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="2" time="0.090128"/>
+        <testcase name="testSizeReturnsQueueLength" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="403" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="2" time="0.124806"/>
+        <testcase name="testGetJobsReturnsJobsFromQueue" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="429" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="3" time="0.166844"/>
+        <testcase name="testRetryAddsJobBackToQueue" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="457" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="5" time="0.184259"/>
+        <testcase name="testGetDueJobsReturnsScheduledJobsDue" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="488" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="2" time="0.109009"/>
+        <testcase name="testMarkAsCompletedUpdatesJobStatus" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="511" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="1" time="0.133276"/>
+        <testcase name="testMarkAsFailedUpdatesJobStatusAndAddsToFailedQueue" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="532" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="1" time="0.142185"/>
+        <testcase name="testProcessJobHandlesValidJob" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="554" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="2" time="0.200957"/>
+        <testcase name="testProcessJobRejectsUnregisteredJobs" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="577" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="2" time="0.068195"/>
+        <testcase name="testProcessJobHandlesExceptions" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="590" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="2" time="0.135770"/>
+        <testcase name="testProcessJobMarksJobAsFailedAfterMaxAttempts" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="613" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="2" time="0.062345"/>
+        <testcase name="testCanGetInstance" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="640" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="2" time="0.094726"/>
+        <testcase name="testCanSetClient" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="669" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="1" time="0.053477"/>
+        <testcase name="testJobCanBeDispatchedThroughStaticMethod" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="681" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="4" time="0.130378"/>
+        <testcase name="testJobCanBeScheduledThroughStaticMethod" file="/var/www/html/tests/NeoFrameworkJobsTest.php" line="725" class="Tests\NeoFrameworkJobsTest" classname="Tests.NeoFrameworkJobsTest" assertions="3" time="0.098018"/>
+      </testsuite>
+      <testsuite name="Tests\NeoFrameworkRequestTest" file="/var/www/html/tests/NeoFrameworkRequestTest.php" tests="14" assertions="62" errors="0" failures="0" skipped="0" time="0.039172">
+        <testcase name="testIsXmlHttpRequest" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="27" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="4" time="0.000692"/>
+        <testcase name="testGetAllHeaders" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="42" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="8" time="0.000614"/>
+        <testcase name="testAddAndGetHeader" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="61" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="2" time="0.021429"/>
+        <testcase name="testGetPostCookieMethods" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="68" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="8" time="0.000469"/>
+        <testcase name="testServerMethod" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="94" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="3" time="0.000476"/>
+        <testcase name="testGetMethod" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="106" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="3" time="0.000647"/>
+        <testcase name="testFileMethod" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="121" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="2" time="0.000483"/>
+        <testcase name="testGetCsrfToken" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="140" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="4" time="0.000303"/>
+        <testcase name="testArrayMethods" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="166" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="7" time="0.000474"/>
+        <testcase name="testBodyMethods" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="192" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="8" time="0.011481"/>
+        <testcase name="testContentType" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="222" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="2" time="0.000489"/>
+        <testcase name="testAllMethod" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="233" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="4" time="0.000733"/>
+        <testcase name="testAllMethodWithJsonBody" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="249" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="4" time="0.000451"/>
+        <testcase name="testSanitizeDataRecursive" file="/var/www/html/tests/NeoFrameworkRequestTest.php" line="267" class="Tests\NeoFrameworkRequestTest" classname="Tests.NeoFrameworkRequestTest" assertions="3" time="0.000431"/>
+      </testsuite>
+      <testsuite name="Tests\NeoFrameworkResponseTest" file="/var/www/html/tests/NeoFrameworkResponseTest.php" tests="13" assertions="49" errors="0" failures="0" skipped="0" time="0.068278">
+        <testcase name="testSetAndGetCode" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="18" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="3" time="0.000499"/>
+        <testcase name="testIsSent" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="30" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="1" time="0.000341"/>
+        <testcase name="testSetAndGetHeader" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="35" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="3" time="0.000508"/>
+        <testcase name="testAddHeader" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="48" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="4" time="0.000525"/>
+        <testcase name="testGetHeaders" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="63" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="6" time="0.000465"/>
+        <testcase name="testSetContentType" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="79" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="3" time="0.000442"/>
+        <testcase name="testSetExpiration" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="94" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="5" time="0.024498"/>
+        <testcase name="testSetAndDeleteCookie" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="112" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="4" time="0.000490"/>
+        <testcase name="testGoAndGoToSite" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="141" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="3" time="0.007512"/>
+        <testcase name="testAddContent" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="158" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="8" time="0.000298"/>
+        <testcase name="testGetContent" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="187" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="2" time="0.000269"/>
+        <testcase name="testMethodChaining" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="200" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="5" time="0.000266"/>
+        <testcase name="testSendThrowsExceptionWhenAlreadySent" file="/var/www/html/tests/NeoFrameworkResponseTest.php" line="216" class="Tests\NeoFrameworkResponseTest" classname="Tests.NeoFrameworkResponseTest" assertions="2" time="0.032165"/>
+      </testsuite>
+      <testsuite name="Tests\NeoFrameworkRouterTest" file="/var/www/html/tests/NeoFrameworkRouterTest.php" tests="14" assertions="28" errors="0" failures="0" skipped="0" time="0.451155">
+        <testcase name="testGetNamespace" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="35" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="1" time="0.192874"/>
+        <testcase name="testGetControllerNotHome" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="41" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="4" time="0.008205"/>
+        <testcase name="testGetParameters" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="64" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="8" time="0.138257"/>
+        <testcase name="testGetParametersWithInvalidRegex" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="110" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="2" time="0.008113"/>
+        <testcase name="testGetParametersWithMissingRequired" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="119" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="2" time="0.010188"/>
+        <testcase name="testLoad" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="128" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="2" time="0.008019"/>
+        <testcase name="testLoadWithSpecificController" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="138" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="2" time="0.007955"/>
+        <testcase name="testIsHome" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="148" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="1" time="0.007719"/>
+        <testcase name="testGetPath" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="160" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="1" time="0.008416"/>
+        <testcase name="testRouterWithQueryString" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="178" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="1" time="0.008149"/>
+        <testcase name="testRouterWithComplexURI" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="186" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="1" time="0.008282"/>
+        <testcase name="testParameterValidation" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="194" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="1" time="0.007754"/>
+        <testcase name="testGlobalMiddlewareLoading" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="205" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="1" time="0.027177"/>
+        <testcase name="testRouteRewriteHandling" file="/var/www/html/tests/NeoFrameworkRouterTest.php" line="218" class="Tests\NeoFrameworkRouterTest" classname="Tests.NeoFrameworkRouterTest" assertions="1" time="0.010048"/>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>

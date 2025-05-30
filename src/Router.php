@@ -3,6 +3,7 @@ namespace NeoFramework\Core;
 
 use NeoFramework\Core\Attributes\Route;
 use NeoFramework\Core\Attributes\Middleware;
+use NeoFramework\Core\Middleware\Cors;
 use DI\Container;
 use NeoFramework\Core\Container as CoreContainer;
 use Exception;
@@ -23,12 +24,27 @@ final class Router{
 
     private Container $container;
 
+    private array $globalMiddlewares = [];
+
     public function __construct()
     {
         $this->uri = Url::getUriPath();
         $this->container = (new CoreContainer())->load();
         $this->getFolders();
         $this->getRouteRewrite();
+        $this->loadGlobalMiddlewares();
+    }
+
+    private function loadGlobalMiddlewares(): void
+    {
+        if ($this->isCorsEnabled()) {
+            $this->globalMiddlewares[] = Cors::fromEnv();
+        }
+    }
+
+    private function isCorsEnabled(): bool
+    {
+        return env('CORS_ENABLED') == "true";
     }
 
     private function getRouteRewrite(){
@@ -214,6 +230,10 @@ final class Router{
         $controller->setResquest($request);
         $controller->setResponse($response);
 
+        foreach ($this->globalMiddlewares as $globalMiddleware) {
+            $controller = $globalMiddleware->before($controller);
+        }
+
         if($middlewareAttribute){
             $controller = $middlewareAttribute->handleBefore($controller);
         }
@@ -225,6 +245,10 @@ final class Router{
 
         if($middlewareAttribute){
             $response = $middlewareAttribute->handleAfter($response);
+        }
+
+        foreach (array_reverse($this->globalMiddlewares) as $globalMiddleware) {
+            $response = $globalMiddleware->after($response);
         }
             
         $response->send();

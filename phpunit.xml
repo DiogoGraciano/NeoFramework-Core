@@ -2,30 +2,62 @@
 <phpunit bootstrap="vendor/autoload.php"
          colors="true"
          verbose="true"
-         stopOnFailure="false">
+         stopOnFailure="false"
+         processIsolation="false"
+         backupGlobals="false"
+         backupStaticAttributes="false"
+         convertErrorsToExceptions="true"
+         convertNoticesToExceptions="true"
+         convertWarningsToExceptions="true">
+    
     <testsuites>
-        <testsuite name="NeoFrameworkJobsTest">
+        <testsuite name="NeoFramework Core Tests">
             <directory>tests</directory>
         </testsuite>
-        <testsuite name="NeoFrameworkRequestTest">
+        <testsuite name="Request Tests">
             <file>tests/NeoFrameworkRequestTest.php</file>
         </testsuite>
-        <testsuite name="NeoFrameworkResponseTest">
+        <testsuite name="Response Tests">
             <file>tests/NeoFrameworkResponseTest.php</file>
         </testsuite>
-        <testsuite name="NeoFrameworkControllerTest">
+        <testsuite name="Controller Tests">
             <file>tests/NeoFrameworkControllerTest.php</file>
         </testsuite>
-        <testsuite name="NeoFrameworkRouterTest">
+        <testsuite name="Router Tests">
             <file>tests/NeoFrameworkRouterTest.php</file>
         </testsuite>
+        <testsuite name="Jobs Tests">
+            <file>tests/NeoFrameworkJobsTest.php</file>
+        </testsuite>
     </testsuites>
+    
+    <coverage>
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+        <exclude>
+            <directory>src/Commands</directory>
+            <file>src/helpers.php</file>
+        </exclude>
+        <report>
+            <html outputDirectory="coverage-html"/>
+            <text outputFile="coverage.txt"/>
+            <clover outputFile="coverage.xml"/>
+        </report>
+    </coverage>
+    
     <php>
+        <!-- Test Environment Variables -->
+        <env name="ENVIRONMENT" value="test"/>
         <env name="JOBS_STORAGE_PATH" value="Jobs_Test"/>
         <env name="QUEUE_DRIVER" value="files"/>
+        
+        <!-- Redis Configuration for Tests -->
         <env name="REDIS_HOST" value="redis"/>
         <env name="REDIS_PORT" value="6379"/>
         <env name="REDIS_PASSWORD" value="RedisPass"/>
+        
+        <!-- Database Configuration for Tests -->
         <env name="DRIVER" value="pgsql"/>
         <env name="DBHOST" value="postgres"/>
         <env name="DBPORT" value="5432"/>
@@ -33,7 +65,26 @@
         <env name="DBCHARSET" value="utf8mb4"/>
         <env name="DBUSER" value="postgres"/>
         <env name="DBPASSWORD" value="postgres"/>
+        
+        <!-- Model Configuration for Tests -->
         <env name="PATH_MODEL" value="./tests/app/models"/>
         <env name="MODEL_NAMESPACE" value="Tests\App\Models"/>
+        
+        <!-- Cache Configuration for Tests -->
+        <env name="CACHE_ADAPTER" value="filesystem"/>
+        
+        <!-- CORS Configuration for Tests -->
+        <env name="CORS_ENABLED" value="false"/>
+        <env name="CORS_ORIGINS" value="*"/>
+        <env name="CORS_METHODS" value="GET,POST,PUT,DELETE,OPTIONS"/>
+        <env name="CORS_HEADERS" value="Content-Type,Authorization,X-Requested-With"/>
+        
+        <!-- Disable output buffering for tests -->
+        <ini name="output_buffering" value="Off"/>
+        <ini name="memory_limit" value="1G"/>
     </php>
+    
+    <logging>
+        <junit outputFile="tests-junit.xml"/>
+    </logging>
 </phpunit>

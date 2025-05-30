@@ -1,0 +1,32 @@
+# Test temporary directories and files
+Jobs_Test/
+coverage-html/
+coverage.txt
+coverage.xml
+tests-junit.xml
+
+# PHPUnit cache
+.phpunit.result.cache
+
+# Test logs
+*.log
+
+# Temporary test files
+temp_*
+test_*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~ 

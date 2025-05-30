@@ -31,8 +31,7 @@ abstract class Controller
         }
 
         $this->urlQuery = $this->request->getArray();
-        $this->page = $this->request->get("page") ?? 1;
-        
+        $this->page = intval($this->request->get("page")) ?: 1;
     }
 
     public function setResquest(Request $request){
