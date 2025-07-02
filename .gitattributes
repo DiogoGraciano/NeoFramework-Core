@@ -2,3 +2,5 @@
 /docker-compose.yml export-ignore
 /Dockerfile export-ignore
 /phpunit.xml export-ignore
+/tests-junit.xml export-ignore
+/run-tests.sh export-ignore

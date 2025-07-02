@@ -4,6 +4,7 @@ namespace NeoFramework\Core;
 use NeoFramework\Core\Attributes\Route;
 use NeoFramework\Core\Attributes\Middleware;
 use NeoFramework\Core\Middleware\Cors;
+use NeoFramework\Core\Middleware\SecurityHeaders;
 use DI\Container;
 use NeoFramework\Core\Container as CoreContainer;
 use Exception;
@@ -40,11 +41,20 @@ final class Router{
         if ($this->isCorsEnabled()) {
             $this->globalMiddlewares[] = Cors::fromEnv();
         }
+
+        if ($this->isSecurityHeadersEnabled()) {
+            $this->globalMiddlewares[] = SecurityHeaders::fromEnv();
+        }
     }
 
     private function isCorsEnabled(): bool
     {
         return env('CORS_ENABLED') == "true";
+    }
+
+    private function isSecurityHeadersEnabled(): bool
+    {
+        return env('SECURITY_HEADERS_ENABLED',"true") == "true";
     }
 
     private function getRouteRewrite(){
@@ -194,6 +204,10 @@ final class Router{
             }
     
             $httpMethods = $routeAttribute->getMethods();
+
+            if($this->isCorsEnabled() && !in_array("OPTIONS",$httpMethods)){
+                $httpMethods[] = "OPTIONS";
+            }
 
             $uri = $routeAttribute->getPath();
             $uri = explode("/",$uri);

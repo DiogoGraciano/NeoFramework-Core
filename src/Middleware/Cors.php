@@ -28,13 +28,11 @@ class Cors implements Middleware
         $request = $controller->getRequest();
         $response = $controller->getResponse();
 
-        // Handle preflight OPTIONS request
         if ($request->server('REQUEST_METHOD') === 'OPTIONS') {
             $this->addCorsHeaders($response, $request);
             $response->setCode(200)->send();
         }
 
-        // Add CORS headers for all requests
         $this->addCorsHeaders($response, $request);
 
         return $controller;
@@ -42,7 +40,6 @@ class Cors implements Middleware
 
     public function after(Response $response): Response
     {
-        // Headers are already added in before method
         return $response;
     }
 
@@ -50,7 +47,6 @@ class Cors implements Middleware
     {
         $origin = $request->getHeader('Origin');
 
-        // Set Access-Control-Allow-Origin
         if ($this->isOriginAllowed($origin)) {
             if (in_array('*', $this->config['allowed_origins']) && !$this->config['allow_credentials']) {
                 $response->addHeader('Access-Control-Allow-Origin', '*');
@@ -59,26 +55,20 @@ class Cors implements Middleware
             }
         }
 
-        // Set Access-Control-Allow-Methods
         $response->addHeader('Access-Control-Allow-Methods', implode(', ', $this->config['allowed_methods']));
 
-        // Set Access-Control-Allow-Headers
         $response->addHeader('Access-Control-Allow-Headers', implode(', ', $this->config['allowed_headers']));
 
-        // Set Access-Control-Expose-Headers
         if (!empty($this->config['exposed_headers'])) {
             $response->addHeader('Access-Control-Expose-Headers', implode(', ', $this->config['exposed_headers']));
         }
 
-        // Set Access-Control-Max-Age
         $response->addHeader('Access-Control-Max-Age', (string) $this->config['max_age']);
 
-        // Set Access-Control-Allow-Credentials
         if ($this->config['allow_credentials']) {
             $response->addHeader('Access-Control-Allow-Credentials', 'true');
         }
 
-        // Add Vary header for proper caching
         $response->addHeader('Vary', 'Origin');
     }
 
@@ -102,31 +92,26 @@ class Cors implements Middleware
     {
         $config = [];
 
-        // Get allowed origins from environment
         $corsOrigins = env('CORS_ORIGINS','*');
         if ($corsOrigins !== '*') {
             $config['allowed_origins'] = array_map('trim', explode(',', $corsOrigins));
         }
 
-        // Get allowed methods from environment
         $corsMethods = env('CORS_METHODS');   
         if ($corsMethods) {
             $config['allowed_methods'] = array_map('trim', explode(',', $corsMethods));
         }
 
-        // Get allowed headers from environment
         $corsHeaders = env('CORS_HEADERS');
         if ($corsHeaders) {
             $config['allowed_headers'] = array_map('trim', explode(',', $corsHeaders));
         }
 
-        // Get max age from environment
         $corsMaxAge = env('CORS_MAX_AGE');
         if ($corsMaxAge) {
             $config['max_age'] = (int) $corsMaxAge;
         }
 
-        // Get credentials setting from environment
         $corsCredentials = env('CORS_CREDENTIALS');
         if ($corsCredentials !== null) {
             $config['allow_credentials'] = filter_var($corsCredentials, FILTER_VALIDATE_BOOLEAN);

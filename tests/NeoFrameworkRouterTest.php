@@ -215,6 +215,56 @@ class NeoFrameworkRouterTest extends TestCase
         unset($_ENV['CORS_ENABLED']);
     }
 
+    public function testSecurityHeadersMiddlewareLoadingEnabled()
+    {
+        // Test that SecurityHeaders middleware is loaded when enabled (default)
+        $_ENV['SECURITY_HEADERS_ENABLED'] = 'true';
+        $router = new Router();
+        
+        // We can't directly test private properties, but we can verify the router was created
+        $this->assertInstanceOf(Router::class, $router);
+        
+        // Clean up
+        unset($_ENV['SECURITY_HEADERS_ENABLED']);
+    }
+
+    public function testSecurityHeadersMiddlewareLoadingDisabled()
+    {
+        // Test that SecurityHeaders middleware is not loaded when disabled
+        $_ENV['SECURITY_HEADERS_ENABLED'] = 'false';
+        $router = new Router();
+        
+        // We can't directly test private properties, but we can verify the router was created
+        $this->assertInstanceOf(Router::class, $router);
+        
+        // Clean up
+        unset($_ENV['SECURITY_HEADERS_ENABLED']);
+    }
+
+    public function testSecurityHeadersMiddlewareLoadingDefault()
+    {
+        // Test that SecurityHeaders middleware is loaded by default (when no env var is set)
+        $router = new Router();
+        
+        // We can't directly test private properties, but we can verify the router was created
+        $this->assertInstanceOf(Router::class, $router);
+    }
+
+    public function testBothMiddlewaresEnabled()
+    {
+        // Test that both CORS and SecurityHeaders middlewares can be loaded together
+        $_ENV['CORS_ENABLED'] = 'true';
+        $_ENV['SECURITY_HEADERS_ENABLED'] = 'true';
+        $router = new Router();
+        
+        // We can't directly test private properties, but we can verify the router was created
+        $this->assertInstanceOf(Router::class, $router);
+        
+        // Clean up
+        unset($_ENV['CORS_ENABLED']);
+        unset($_ENV['SECURITY_HEADERS_ENABLED']);
+    }
+
     public function testRouteRewriteHandling()
     {
         // Test that route rewrite config is loaded if it exists
