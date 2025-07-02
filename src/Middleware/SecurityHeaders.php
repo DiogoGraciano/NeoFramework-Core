@@ -16,8 +16,8 @@ class SecurityHeaders implements Middleware
             'x-frame-options' => 'SAMEORIGIN',
             'x-content-type-options' => 'nosniff',
             'referrer-policy' => 'no-referrer-when-downgrade',
-            'content-security-policy' => "",
-            'permissions-policy' => "",
+            'content-security-policy' => "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data:; font-src *; connect-src 'self'; media-src *;",
+            'permissions-policy' => "geolocation=(),microphone=(),camera=()",
             'strict-transport-security' => "max-age=31536000; includeSubDomains",
         ], $config);
     }
@@ -27,7 +27,9 @@ class SecurityHeaders implements Middleware
         $response = $controller->getResponse();
 
         foreach ($this->config as $header => $value) {
-            $response->addHeader($header, $value);
+            if ($value) {
+                $response->addHeader($header, $value);
+            }
         }
 
         return $controller;
