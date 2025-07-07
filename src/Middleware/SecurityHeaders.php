@@ -16,7 +16,7 @@ class SecurityHeaders implements Middleware
             'x-frame-options' => 'SAMEORIGIN',
             'x-content-type-options' => 'nosniff',
             'referrer-policy' => 'no-referrer-when-downgrade',
-            'content-security-policy' => "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data:; font-src *; connect-src 'self'; media-src *;",
+            'content-security-policy' => "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src * data:; font-src *; connect-src 'self'; media-src *;",
             'permissions-policy' => "geolocation=(),microphone=(),camera=()",
             'strict-transport-security' => "max-age=31536000; includeSubDomains",
         ], $config);
