@@ -63,12 +63,27 @@ final class Request
         $this->headers[$name] = $value;
     }
 
+    /**
+     * Busca um cabeçalho sem diferenciar maiúsculas/minúsculas, como manda o HTTP.
+     */
     public function getHeader(string $name): ?string
     {
-        return $this->headers[$name] ?? null;
+        if (isset($this->headers[$name])) {
+            return $this->headers[$name];
+        }
+
+        $needle = strtolower($name);
+
+        foreach ($this->headers as $header => $value) {
+            if (strtolower($header) === $needle) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
-    public function get(string $var,bool $sanitazed = true)
+    public function get(string $var,bool $sanitazed = false)
     {
         if (isset($this->get[$var]))
             return $sanitazed?$this->sanitizeData($this->get[$var]):$this->get[$var];
@@ -76,7 +91,7 @@ final class Request
             return null;
     }
 
-    public function post(string $var,bool $sanitazed = true)
+    public function post(string $var,bool $sanitazed = false)
     {
         if (isset($this->post[$var]))
             return $sanitazed?$this->sanitizeData($this->post[$var]):$this->post[$var];
@@ -84,7 +99,7 @@ final class Request
             return null;
     }
 
-    public function cookie(string $var,bool $sanitazed = true)
+    public function cookie(string $var,bool $sanitazed = false)
     {
         if (isset($this->cookie[$var]))
             return $sanitazed?$this->sanitizeData($this->cookie[$var]):$this->cookie[$var];
@@ -117,22 +132,27 @@ final class Request
         return $this->server("REQUEST_METHOD");
     }
 
+    /**
+     * Token CSRF enviado no corpo, na query ou no cabeçalho X-CSRF-TOKEN.
+     */
     public function getCsrfToken():null|string
     {
-        return $this->post("CSRF_TOKEN") ?? $this->get("CSRF_TOKEN") ?? $this->server("X-CSRF-TOKEN");
+        $token = $this->post("CSRF_TOKEN") ?? $this->get("CSRF_TOKEN") ?? $this->getHeader("X-CSRF-TOKEN");
+
+        return is_string($token) ? $token : null;
     }
 
-    public function getArray(bool $sanitazed = true)
+    public function getArray(bool $sanitazed = false)
     {
         return $sanitazed?$this->sanitizeData($this->get):$this->get;
     }
 
-    public function postArray(bool $sanitazed = true)
+    public function postArray(bool $sanitazed = false)
     {
         return $sanitazed?$this->sanitizeData($this->post):$this->post;
     }
 
-    public function cookieArray(bool $sanitazed = true)
+    public function cookieArray(bool $sanitazed = false)
     {
         return $sanitazed?$this->sanitizeData($this->cookie):$this->cookie;
     }
@@ -177,11 +197,18 @@ final class Request
         return simplexml_load_string($this->getBody());
     }
 
+    /**
+     * Reúne os dados da requisição: query string, corpo e arquivos.
+     *
+     * Cookies ficam de fora de propósito. Eles são plantáveis por qualquer
+     * subdomínio e, se participassem da mescla, sobrescreveriam campos de
+     * formulário. Use cookieArray() quando precisar deles.
+     *
+     * Precedência, do menor para o maior: query < corpo < JSON < arquivos.
+     */
     public function all(): array
     {
-        $all = [];
-
-        $all = array_merge($this->postArray(), $this->getArray(), $this->cookieArray(), $this->filesArray());
+        $all = array_merge($this->getArray(), $this->postArray());
 
         $body = $this->getBodyAsJson(true);
 
@@ -189,7 +216,7 @@ final class Request
             $all = array_merge($all, $body);
         }
 
-        return $all;
+        return array_merge($all, $this->filesArray());
     }
 
     public function contentType(): string
@@ -199,13 +226,17 @@ final class Request
 
     private function processFiles(array $fileData): array
     {
+        if (!isset($fileData['name'], $fileData['tmp_name'], $fileData['error'])) {
+            return [];
+        }
+
         $isMulti = is_array($fileData['name']);
         $fileKeys = array_keys($fileData);
 
         if ($isMulti) {
             $transposed = array_map(null, ...array_values($fileData));
             $fileList = array_map(function ($data) use ($fileKeys) {
-                return array_combine($fileKeys, $data);
+                return array_combine($fileKeys, is_array($data) ? $data : [$data]);
             }, $transposed);
         } else {
             $fileList = [$fileData];
@@ -213,14 +244,41 @@ final class Request
 
         $splFiles = [];
         foreach ($fileList as $fileInfo) {
-            if ($fileInfo['error'] === UPLOAD_ERR_OK) {
-                $splFiles[] = new File($fileInfo['tmp_name']);
+            if (!is_array($fileInfo) || ($fileInfo['error'] ?? null) !== UPLOAD_ERR_OK) {
+                continue;
             }
+
+            // Garante que o caminho veio de um upload HTTP e não foi forjado
+            // para apontar para um arquivo qualquer do servidor.
+            if (!$this->isUploadedFile($fileInfo['tmp_name'])) {
+                continue;
+            }
+
+            $splFiles[] = new File($fileInfo['tmp_name']);
         }
 
         return $splFiles;
     }
 
+    /**
+     * Isolado para permitir que os testes simulem uploads sem passar por SAPI.
+     */
+    protected function isUploadedFile(string $tmpName): bool
+    {
+        if (PHP_SAPI === 'cli') {
+            return is_file($tmpName);
+        }
+
+        return is_uploaded_file($tmpName);
+    }
+
+    /**
+     * Escapa entidades HTML de forma recursiva.
+     *
+     * Não é uma defesa contra SQL injection nem substitui o escape na saída:
+     * é apenas um utilitário para quando o valor vai direto para o HTML sem
+     * passar pelo Template.
+     */
     private function sanitizeData($data)
     {
         if (is_array($data)) {

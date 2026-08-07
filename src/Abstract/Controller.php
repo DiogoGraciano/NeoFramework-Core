@@ -18,7 +18,13 @@ abstract class Controller
     #[Inject(Response::class)]
     protected Response $response;
 
-    const validCsrfToken = true;
+    /**
+     * Desativa a validação de CSRF em todos os métodos deste controller.
+     *
+     * Só faça isso em endpoints que não usam sessão para autenticar (uma API
+     * com token no header, por exemplo).
+     */
+    const skipCsrfValidation = false;
 
     public function __construct()
     {

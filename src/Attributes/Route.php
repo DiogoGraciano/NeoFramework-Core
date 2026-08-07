@@ -5,6 +5,14 @@ namespace NeoFramework\Core\Attributes;
 #[\Attribute(\Attribute::TARGET_METHOD)]
 final class Route
 {
+    /**
+     * @param string $path  Padrão da rota.
+     * @param array  $methods Métodos HTTP aceitos.
+     * @param bool   $validCsrf Exige token CSRF nos métodos que alteram estado.
+     *                          Métodos seguros (GET/HEAD/OPTIONS) nunca são
+     *                          validados; a decisão é tomada por requisição,
+     *                          no Router, e não pela rota inteira.
+     */
     public function __construct(
         private string $path,
         private array $methods = ['GET'],
@@ -16,10 +24,6 @@ final class Route
             }
             return $value;
         }, $this->methods);
-
-        if(in_array("GET",$this->methods)){
-            $this->validCsrf = false;
-        }
     }
 
     public function getMethods():array

@@ -57,6 +57,29 @@ final class Router{
         return env('SECURITY_HEADERS_ENABLED',"true") == "true";
     }
 
+    /**
+     * Métodos HTTP que, por definição, não alteram estado e por isso não exigem
+     * token CSRF.
+     */
+    private const SAFE_HTTP_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
+    /**
+     * Decide se a requisição atual precisa apresentar um token CSRF válido.
+     *
+     * A isenção é decidida por requisição, e não pela rota inteira: uma rota que
+     * aceita GET e POST continua exigindo token no POST.
+     */
+    private function requiresCsrfValidation(object $controller, Route $routeAttribute, Request $request): bool
+    {
+        if ($controller::skipCsrfValidation || !$routeAttribute->getValidCsrf()) {
+            return false;
+        }
+
+        $method = strtoupper((string) $request->getMethod());
+
+        return !in_array($method, self::SAFE_HTTP_METHODS, true);
+    }
+
     private function getRouteRewrite(){
         if(file_exists(Functions::getRoot()."Config/route_rewrite.config.php")){
             $this->routesRewrite = include_once Functions::getRoot()."Config/route_rewrite.config.php";
@@ -65,9 +88,27 @@ final class Router{
 
     private function getFolders(){
         $folder = Functions::getRoot()."App/Controllers";
+
+        // A raiz também é um namespace válido: controllers podem viver direto
+        // em App/Controllers, sem subpasta.
+        $this->folders[] = "App\Controllers";
+
+        if (!is_dir($folder)) {
+            return;
+        }
+
         $files = scandir($folder);
+
+        if ($files === false) {
+            return;
+        }
+
         foreach ($files as $file) {
-            if (!str_contains($file, '.'))
+            if ($file === '.' || $file === '..') {
+                continue;
+            }
+
+            if (is_dir($folder . DIRECTORY_SEPARATOR . $file))
                 $this->folders[] = "App\Controllers\\".$file;
         }
     }
@@ -133,7 +174,9 @@ final class Router{
 
     private function checkRouteRewrite($controller): bool
     {
-        if (!in_array($controller, $this->routesRewrite)) {
+        // O mapa é indexado pelo nome da rota; procurar nos valores nunca casava
+        // com a chave usada logo abaixo.
+        if (!isset($this->routesRewrite[$controller])) {
             return false;
         }
 
@@ -237,8 +280,9 @@ final class Router{
         $response = new Response;
         $request = new Request;
 
-        if(!$controller::validCsrfToken && $routeAttribute->getValidCsrf() && $request->getCsrfToken() === Session::getCsrfToken()){
-            $response->setCode(403)->send();
+        if($this->requiresCsrfValidation($controller,$routeAttribute,$request) && !Session::validateCsrfToken($request->getCsrfToken())){
+            $response->setCode(403)->addContent("Invalid or missing CSRF token.")->send();
+            return;
         }
 
         $controller->setResquest($request);

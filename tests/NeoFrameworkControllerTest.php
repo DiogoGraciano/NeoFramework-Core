@@ -193,9 +193,11 @@ class NeoFrameworkControllerTest extends TestCase
         $this->assertFalse($controller->testIsMobile());
     }
 
-    public function testValidCsrfTokenConstant()
+    public function testSkipCsrfValidationConstantDefaultsToFalse()
     {
-        $this->assertTrue(TestController::validCsrfToken);
+        // O default precisa ser "não pular": um controller que não se manifesta
+        // tem de ficar protegido.
+        $this->assertFalse(TestController::skipCsrfValidation);
     }
 
     public function testMethodChaining()

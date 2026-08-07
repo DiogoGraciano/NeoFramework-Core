@@ -83,12 +83,12 @@ class NeoFrameworkRequestTest extends TestCase
         $this->assertNull($request->post('non_existent'));
         $this->assertNull($request->cookie('non_existent'));
 
-        // Test sanitization
+        // A entrada chega intacta por padrão; escapar é responsabilidade da saída
         $_GET['unsafe'] = '<script>alert("xss")</script>';
         $request = new Request();
 
-        $this->assertEquals('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;', $request->get('unsafe'));
-        $this->assertEquals('<script>alert("xss")</script>', $request->get('unsafe', false));
+        $this->assertEquals('<script>alert("xss")</script>', $request->get('unsafe'));
+        $this->assertEquals('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;', $request->get('unsafe', true));
     }
 
     public function testServerMethod()
@@ -142,7 +142,7 @@ class NeoFrameworkRequestTest extends TestCase
         // Test POST token priority
         $_POST['CSRF_TOKEN'] = 'post_token';
         $_GET['CSRF_TOKEN'] = 'get_token';
-        $_SERVER['X-CSRF-TOKEN'] = 'header_token';
+        $_SERVER['HTTP_X_CSRF_TOKEN'] = 'header_token';
         
         $request = new Request();
         $this->assertEquals('post_token', $request->getCsrfToken());
@@ -158,7 +158,7 @@ class NeoFrameworkRequestTest extends TestCase
         $this->assertEquals('header_token', $request->getCsrfToken());
 
         // Test no token
-        unset($_SERVER['X-CSRF-TOKEN']);
+        unset($_SERVER['HTTP_X_CSRF_TOKEN']);
         $request = new Request();
         $this->assertNull($request->getCsrfToken());
     }
@@ -239,11 +239,27 @@ class NeoFrameworkRequestTest extends TestCase
 
         $request = new Request();
         $all = $request->all();
-        
+
         $this->assertArrayHasKey('get_key', $all);
         $this->assertArrayHasKey('post_key', $all);
-        $this->assertArrayHasKey('cookie_key', $all);
         $this->assertArrayHasKey('file_key', $all);
+
+        // Cookies não participam da mescla: eles são plantáveis por terceiros e
+        // sobrescreveriam campos de formulário.
+        $this->assertArrayNotHasKey('cookie_key', $all);
+        $this->assertArrayHasKey('cookie_key', $request->cookieArray());
+    }
+
+    public function testAllMethodPrefersBodyOverQueryString()
+    {
+        $_GET = ['campo' => 'da_query'];
+        $_POST = ['campo' => 'do_corpo'];
+        $_COOKIE = ['campo' => 'do_cookie'];
+        $_FILES = [];
+
+        $request = new Request();
+
+        $this->assertEquals('do_corpo', $request->all()['campo']);
     }
 
     public function testAllMethodWithJsonBody()
