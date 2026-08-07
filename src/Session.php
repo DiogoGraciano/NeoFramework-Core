@@ -125,8 +125,10 @@ final class Session
 
     public static function set(string $nome, $valor):void
     {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            return;
+        // O array é criado se ainda não existir: em CLI (jobs, comandos) não há
+        // sessão ativa, e a versão anterior emitia warning ao escrever.
+        if (!isset($_SESSION)) {
+            $_SESSION = [];
         }
 
         $_SESSION["neof_".$nome] = $valor;
@@ -134,7 +136,7 @@ final class Session
 
     public static function get(string $nome):mixed
     {
-        if (session_status() !== PHP_SESSION_ACTIVE || !isset($_SESSION)) {
+        if (!isset($_SESSION) || !is_array($_SESSION)) {
             return null;
         }
 

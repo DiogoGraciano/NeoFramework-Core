@@ -13,7 +13,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\":"tests"
+            "Tests\\": "tests"
         }
     },
     "authors": [
@@ -28,7 +28,7 @@
     "minimum-stability": "stable",
     "require": {
         "phpmailer/phpmailer": "^6.9",
-        "diogodg/neoorm": "^1.0",
+        "diogodg/neoorm": "^2.0",
         "league/flysystem": "^3.29",
         "php-di/php-di": "^7.0",
         "monolog/monolog": "^3.8",
@@ -45,5 +45,9 @@
     },
     "require-dev": {
         "phpunit/phpunit": "^12.1"
+    },
+    "suggest": {
+        "aws/aws-sdk-php": "Required for the S3 disk of FileStorage",
+        "league/flysystem-aws-s3-v3": "Required for the S3 disk of FileStorage"
     }
 }

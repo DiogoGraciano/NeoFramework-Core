@@ -113,13 +113,16 @@ final class Response
      */
     public function go(string $caminho): self
     {
-        $caminho = ltrim($caminho, '/');
+        // A validação olha o valor original: "//atacante.com" e "/\atacante.com"
+        // são lidos pelo navegador como URL absoluta, e um ltrim prévio os
+        // transformaria em caminhos aparentemente internos.
+        $normalized = str_replace('\\', '/', $caminho);
 
-        if (str_contains($caminho, '://') || str_starts_with($caminho, '/') || str_starts_with($caminho, '\\')) {
+        if (str_contains($normalized, '://') || str_starts_with($normalized, '//')) {
             throw new \InvalidArgumentException("go() aceita apenas caminhos internos; use goToSite() para URLs absolutas.");
         }
 
-        $this->setHeader('Location', Url::getUrlBase() . $caminho);
+        $this->setHeader('Location', Url::getUrlBase() . ltrim($normalized, '/'));
         return $this;
     }
 
