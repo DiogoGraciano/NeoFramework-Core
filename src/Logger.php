@@ -3,16 +3,36 @@ namespace NeoFramework\Core;
 use Monolog\Level;
 use Monolog\Logger as L;
 use Monolog\Handler\StreamHandler;
-use Monolog\Handler\FirePHPHandler;
 
-class Logger 
+class Logger
 {
-    private static function load(){
-        $logger = new L('System');
-        $logger->pushHandler(new StreamHandler(Functions::getRoot().'Logs/system.log', Level::Debug));
-        $logger->pushHandler(new FirePHPHandler());
+    private static ?L $logger = null;
 
-        return $logger;
+    /**
+     * Instância compartilhada do logger.
+     *
+     * O FirePHPHandler foi removido: ele serializa cada registro em cabeçalhos
+     * X-Wf-* da resposta HTTP, o que em produção entrega mensagens de erro e
+     * stack traces direto ao cliente.
+     */
+    private static function load(): L
+    {
+        if (self::$logger === null) {
+            $logger = new L('System');
+            $logger->pushHandler(new StreamHandler(Functions::getRoot().'Logs/system.log', Level::Debug));
+
+            self::$logger = $logger;
+        }
+
+        return self::$logger;
+    }
+
+    /**
+     * Descarta a instância. Útil em testes.
+     */
+    public static function reset(): void
+    {
+        self::$logger = null;
     }
 
     public static function debug(array|string $message){

@@ -16,7 +16,9 @@ class Validator
         $validator = new v;
 
         foreach ($rules as $field => $fieldRules) {
-            if (!is_object($fieldRules) && $fieldRules::class != "Respect\Validation\Validator") {
+            // Com && uma regra em string chegava ao ::class e disparava um Error
+            // em vez da exceção documentada.
+            if (!$fieldRules instanceof v) {
                 throw new InvalidArgumentException("Rules for the field '{$field}' must be an instace of Respect\Validation\Validator.");
             }
 
@@ -27,10 +29,10 @@ class Validator
             $validator->assert($fields);
         } catch (NestedValidationException $exception) {
             $errorsOrigin = $exception->getMessages();
-            $fields = array_keys($errorsOrigin);
-            
+            $failedFields = array_keys($errorsOrigin);
+
             $errors = [];
-            foreach ($fields as $field){
+            foreach ($failedFields as $field){
                 if(isset($messages[$field])){
                     $errors[$field] = $messages[$field];
                 }

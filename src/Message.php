@@ -1,15 +1,22 @@
 <?php
 
 namespace NeoFramework\Core;
-use NeoFramework\Core\Abstract\Layout;
+
 use NeoFramework\Core\Session;
 
-class Message extends layout{
-
-    public static function clean(){
-        Session::set("Error",[]);
-        Session::set("Message",[]);
-        Session::set("Sucessos",[]);
+/**
+ * Mensagens de uma requisição para a próxima (flash messages).
+ *
+ * Os setters acumulam: uma operação que reporta vários problemas não perde
+ * todos menos o último.
+ */
+class Message
+{
+    public static function clean(): void
+    {
+        Session::set("Error", []);
+        Session::set("Message", []);
+        Session::set("Sucessos", []);
     }
 
     public static function getError():array
@@ -19,7 +26,7 @@ class Message extends layout{
 
     public static function setError(...$erros):void
     {
-        Session::set("Error",$erros);
+        self::append("Error", $erros);
     }
 
     public static function getMessage():array
@@ -29,7 +36,7 @@ class Message extends layout{
 
     public static function setMessage(...$Mensagens):void
     {
-        Session::set("Message",$Mensagens);
+        self::append("Message", $Mensagens);
     }
 
     public static function getSuccess():array
@@ -39,7 +46,22 @@ class Message extends layout{
 
     public static function setSuccess(...$Sucessos):void
     {
-        Session::set("Sucessos",$Sucessos);
+        self::append("Sucessos", $Sucessos);
+    }
+
+    /**
+     * Substitui o conteúdo da chave, descartando o que já estava lá.
+     */
+    public static function replaceError(...$erros):void
+    {
+        Session::set("Error", $erros);
+    }
+
+    private static function append(string $key, array $values): void
+    {
+        $current = Session::get($key);
+        $current = is_array($current) ? $current : [];
+
+        Session::set($key, array_merge($current, $values));
     }
 }
-?>
