@@ -20,7 +20,10 @@ final class Cache {
                 throw new Exception("CACHE_ADAPTER not found in the .env file, please configure the cache adapter");
             }
 
-            $adapterType = strtolower(!env("CACHE_ADAPTER") ?? 'filesystem');
+            // O "!" transformava o valor em bool, strtolower(false) devolvia ""
+            // e o switch caía sempre no default: redis e memcached nunca eram
+            // usados, por mais que estivessem configurados.
+            $adapterType = strtolower((string) env("CACHE_ADAPTER", "filesystem"));
 
             switch ($adapterType) {
                 case 'memcached':
@@ -51,13 +54,15 @@ final class Cache {
         }
 
         try {
-            $password = env("MEMCACHED_USER").":".env("MEMCACHED_PASSWORD")."@";
+            $user = (string) env("MEMCACHED_USER");
+            $pass = (string) env("MEMCACHED_PASSWORD");
 
-            if($password == ":@")
-                $password = "";
+            $credentials = ($user !== "" || $pass !== "")
+                ? rawurlencode($user) . ":" . rawurlencode($pass) . "@"
+                : "";
 
             $client = MemcachedAdapter::createConnection(
-                "memcached://".$password.env("MEMCACHED_HOST").":".env("MEMCACHED_PORT")
+                "memcached://".$credentials.env("MEMCACHED_HOST").":".env("MEMCACHED_PORT")
             );
             return new MemcachedAdapter($client);
         } catch (\Exception $e) {
@@ -72,13 +77,14 @@ final class Cache {
         }
 
         try {
-            $password = env("REDIS_PASSWORD");
+            $password = (string) env("REDIS_PASSWORD");
 
-            if($password != "")
-                $password .= "@"; 
+            // A senha precisa vir depois de ":" — sem os dois-pontos o Symfony
+            // interpreta o valor como nome de usuário e a autenticação falha.
+            $credentials = $password !== "" ? ":" . rawurlencode($password) . "@" : "";
 
             $client = RedisAdapter::createConnection(
-                "redis://".$password.env("REDIS_HOST").":".env("REDIS_PORT")."/0"
+                "redis://".$credentials.env("REDIS_HOST").":".env("REDIS_PORT")."/0"
             );
             return new RedisAdapter($client);
          } catch (\Exception $e) {

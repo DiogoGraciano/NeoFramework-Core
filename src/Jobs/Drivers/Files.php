@@ -56,18 +56,43 @@ class Files implements Client
 
     // --- Path Generation Methods ---
 
+    /**
+     * O nome da fila também vira diretório e precisa do mesmo cuidado do id.
+     */
+    private function sanitizeQueue(string $queue): string
+    {
+        $safe = trim((string) preg_replace('/[^A-Za-z0-9._-]/', '', $queue), '.');
+
+        return $safe !== '' ? $safe : 'default';
+    }
+
     private function getQueuePath(string $queue): string
     {
-        return $this->storagePath . DIRECTORY_SEPARATOR . 'queues' . DIRECTORY_SEPARATOR . $queue;
+        return $this->storagePath . DIRECTORY_SEPARATOR . 'queues' . DIRECTORY_SEPARATOR . $this->sanitizeQueue($queue);
     }
 
     private function getScheduledPath(string $queue): string
     {
-        return $this->storagePath . DIRECTORY_SEPARATOR . 'scheduled' . DIRECTORY_SEPARATOR . $queue;
+        return $this->storagePath . DIRECTORY_SEPARATOR . 'scheduled' . DIRECTORY_SEPARATOR . $this->sanitizeQueue($queue);
+    }
+
+    /**
+     * Reduz o id a caracteres seguros para nome de arquivo.
+     *
+     * O id chega de um JSON que pode ter sido editado; sem isso, um valor com
+     * "../" escaparia do diretório de trabalho da fila.
+     */
+    private function sanitizeJobId(string $jobId): string
+    {
+        $safe = preg_replace('/[^A-Za-z0-9._-]/', '', $jobId);
+
+        return trim((string) $safe, '.');
     }
 
     private function getDetailsPath(string $jobId): string
     {
+        $jobId = $this->sanitizeJobId($jobId);
+
         // Use subdirectories for potentially large number of jobs
         $prefix = substr($jobId, 0, 2);
         $path = $this->storagePath . DIRECTORY_SEPARATOR . 'details' . DIRECTORY_SEPARATOR . $prefix;
@@ -79,6 +104,8 @@ class Files implements Client
 
     private function getLockPath(string $jobId): string
     {
+        $jobId = $this->sanitizeJobId($jobId);
+
         $path = $this->storagePath . DIRECTORY_SEPARATOR . 'locks';
          if ($jobId) {
             return $path . DIRECTORY_SEPARATOR . $jobId . '.lock';
@@ -428,7 +455,7 @@ class Files implements Client
      * Uses file creation ('x' mode) for atomicity attempt.
      * Checks modification time for TTL.
      */
-    public function lock(string $jobId, int $ttl = null): bool
+    public function lock(string $jobId, ?int $ttl = null): bool
     {
         $lockPath = $this->getLockPath($jobId);
         $this->ensureDirectoryExists(dirname($lockPath));

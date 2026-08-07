@@ -12,7 +12,6 @@ final class Response
     public function setCode(int $code):self
     {
         $this->code = $code;
-        http_response_code($code);
 
         return $this;
     }
@@ -106,14 +105,38 @@ final class Response
         return $this->setCookie($name, '', time() - 3600, $path, $domain, $secure, true);
     }
 
+    /**
+     * Redireciona para um caminho interno da aplicação.
+     *
+     * O caminho precisa ser relativo. "//evil.com" e "https://evil.com" são
+     * recusados: concatenados à base eles escapariam para outro domínio.
+     */
     public function go(string $caminho): self
     {
+        $caminho = ltrim($caminho, '/');
+
+        if (str_contains($caminho, '://') || str_starts_with($caminho, '/') || str_starts_with($caminho, '\\')) {
+            throw new \InvalidArgumentException("go() aceita apenas caminhos internos; use goToSite() para URLs absolutas.");
+        }
+
         $this->setHeader('Location', Url::getUrlBase() . $caminho);
         return $this;
     }
 
+    /**
+     * Redireciona para uma URL absoluta.
+     *
+     * Só http e https são aceitos, para barrar javascript: e data: — que
+     * transformariam um redirect em execução de script.
+     */
     public function goToSite(string $caminho): self
     {
+        $scheme = strtolower((string) parse_url($caminho, PHP_URL_SCHEME));
+
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            throw new \InvalidArgumentException("goToSite() aceita apenas URLs http ou https.");
+        }
+
         $this->setHeader('Location',$caminho);
         return $this;
     }
@@ -145,15 +168,43 @@ final class Response
         return implode('', $this->content);
     }
 
-    public function send()
+    /**
+     * Copia para esta resposta os cabeçalhos que ainda não foram definidos aqui.
+     *
+     * Usado quando o controller devolve uma Response nova: sem isso os
+     * cabeçalhos de CORS e de segurança adicionados pelos middlewares "before"
+     * seriam descartados.
+     */
+    public function mergeHeadersFrom(Response $other): self
+    {
+        foreach ($other->getHeaders() as $name => $values) {
+            if (!isset($this->headers[$name])) {
+                $this->headers[$name] = $values;
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Emite status, cabeçalhos e corpo.
+     *
+     * Não encerra o processo: quem controla o fluxo é o Router. Chamar exit aqui
+     * impedia testar o framework e cortava os middlewares "after" pela metade.
+     */
+    public function send(): void
     {
         if ($this->isSent) {
             throw new \Exception("Response already sent");
         }
 
-        foreach ($this->headers as $name => $values) {
-            foreach ($values as $value) {
-                header("$name: $value", false);
+        if (!headers_sent()) {
+            http_response_code($this->code);
+
+            foreach ($this->headers as $name => $values) {
+                foreach ($values as $value) {
+                    header("$name: $value", false);
+                }
             }
         }
 
@@ -163,7 +214,5 @@ final class Response
         }
 
         $this->isSent = true;
-
-        exit;
     }
 }

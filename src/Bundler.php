@@ -9,12 +9,14 @@ class Bundler
 {
     public static function build(array $config){
 
-        if(!file_exists(Functions::getRoot()."public/assets/css")){
-            mkdir(Functions::getRoot()."public/assets/css",755);
+        // 755 em decimal vira 0o1363 (com sticky bit); o modo precisa ser octal.
+        // E sem recursive a criação falha quando public/assets ainda não existe.
+        if(!is_dir(Functions::getRoot()."public/assets/css")){
+            mkdir(Functions::getRoot()."public/assets/css",0755,true);
         }
 
-        if(!file_exists(Functions::getRoot()."public/assets/js")){
-            mkdir(Functions::getRoot()."public/assets/js",755);
+        if(!is_dir(Functions::getRoot()."public/assets/js")){
+            mkdir(Functions::getRoot()."public/assets/js",0755,true);
         }
 
         self::deleteFiles(Functions::getRoot()."public/assets/css");
@@ -61,26 +63,47 @@ class Bundler
 
     public static function getCssFile($key = "ALL"):string
     {
-        $files = scandir(Functions::getRoot()."public/assets/css");
-
-        foreach ($files as $file){
-            if(str_contains($file,$key))
-                return $file;
-        }
-
-        return isset($files[2])?$files[2]:"";
+        return self::findBundle("public/assets/css", $key, "css");
     }
 
     public static function getJsFile($key = "ALL"):string
     {
-        $files = scandir(Functions::getRoot()."public/assets/js");
+        return self::findBundle("public/assets/js", $key, "js");
+    }
 
-        foreach ($files as $file){
-            if(str_contains($file,$key))
-                return $file;
+    /**
+     * Localiza o bundle gerado para uma chave, ignorando "." e ".." — que a
+     * varredura anterior tratava como candidatos válidos.
+     */
+    private static function findBundle(string $relativePath, string $key, string $extension): string
+    {
+        $dir = Functions::getRoot().$relativePath;
+
+        if(!is_dir($dir)){
+            return "";
         }
 
-        return isset($files[2])?$files[2]:"";
+        $files = scandir($dir);
+
+        if($files === false){
+            return "";
+        }
+
+        $candidates = [];
+
+        foreach ($files as $file){
+            if($file === "." || $file === ".." || !str_ends_with($file, "." . $extension)){
+                continue;
+            }
+
+            if(str_contains($file,$key)){
+                return $file;
+            }
+
+            $candidates[] = $file;
+        }
+
+        return $candidates[0] ?? "";
     }
 
     private static function deleteFiles(string $path){
@@ -99,29 +122,45 @@ class Bundler
 
     private static function getFiles(CSS|JS &$minifier,string $path,array $filesConfig = []){
 
+        if(!is_dir($path)){
+            return;
+        }
+
         $files = scandir($path);
 
+        if($files === false){
+            return;
+        }
+
+        sort($files, SORT_STRING);
+
         foreach ($files as $file){
-            
+
             if($file == "." || $file == ".."){
                 continue;
             }
 
-            if(!str_contains($file,'.js') && !str_contains($file,'.css')){
+            $fullPath = $path.DIRECTORY_SEPARATOR.$file;
+
+            // O teste de extensão precisa vir depois do teste de diretório:
+            // nomes de pasta não contêm ".js"/".css", então o continue
+            // descartava toda subpasta antes de chegar à recursão.
+            if(is_dir($fullPath)){
+                self::getFiles($minifier,$fullPath,$filesConfig);
                 continue;
             }
 
-            if($filesConfig && !in_array($file,$filesConfig)){
+            $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+
+            if(!in_array($extension, ['js','css'], true)){
                 continue;
             }
 
-            if(is_dir($path.DIRECTORY_SEPARATOR.$file)){
-                self::getFiles($minifier,$path.DIRECTORY_SEPARATOR.$file);
+            if($filesConfig && !in_array($file,$filesConfig,true)){
+                continue;
             }
 
-            if(!is_dir($path.DIRECTORY_SEPARATOR.$file)){
-                $minifier->add($path.DIRECTORY_SEPARATOR.$file);
-            }
+            $minifier->add($fullPath);
         }
     }
 }

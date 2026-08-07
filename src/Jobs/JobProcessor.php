@@ -46,24 +46,27 @@ class JobProcessor
         
         try {
             $jobInstance = new $class(...$job->getArgs());
-            
+
             $result = call_user_func_array([$jobInstance, 'handle'],[]);
-            
+
             $this->client->markAsCompleted($job,is_string($result) ? $result : null);
-            
-            $this->client->unlock($job->getId());
-            
+
             return true;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
+            // Throwable, e não Exception: um TypeError dentro do job derrubava o
+            // worker e deixava o lock preso até expirar.
             if ($job->getAttempts() < $this->maxAttempts) {
-                $this->client->retry($job);
+                // Sem a fila, um job de fila nomeada voltava sempre para "default".
+                $this->client->retry($job, $queue);
             } else {
                 $this->client->markAsFailed($job, $e->getMessage(),$queue);
             }
 
-            $this->client->unlock($job->getId());
-            
             return false;
+        } finally {
+            // O unlock precisa acontecer mesmo se markAsFailed/markAsCompleted
+            // lançarem, caso contrário o job trava para sempre.
+            $this->client->unlock($job->getId());
         }
     }
 

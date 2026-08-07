@@ -3,6 +3,7 @@
 namespace NeoFramework\Core\Middleware;
 
 use NeoFramework\Core\Abstract\Controller;
+use NeoFramework\Core\Exceptions\HttpResponseException;
 use NeoFramework\Core\Interfaces\Middleware;
 use NeoFramework\Core\Response;
 use NeoFramework\Core\Request;
@@ -21,6 +22,16 @@ class Cors implements Middleware
             'max_age' => 86400, // 24 hours
             'allow_credentials' => false,
         ], $config);
+
+        // Refletir a Origin do requisitante junto de Allow-Credentials permite
+        // que qualquer site leia respostas autenticadas. O próprio padrão CORS
+        // proíbe a combinação; falhar aqui evita o falso senso de proteção.
+        if ($this->config['allow_credentials'] && in_array('*', $this->config['allowed_origins'], true)) {
+            throw new \InvalidArgumentException(
+                "CORS: allow_credentials não pode ser usado com allowed_origins '*'. " .
+                "Liste explicitamente as origens em CORS_ORIGINS."
+            );
+        }
     }
 
     public function before(Controller $controller): Controller
@@ -28,12 +39,12 @@ class Cors implements Middleware
         $request = $controller->getRequest();
         $response = $controller->getResponse();
 
-        if ($request->server('REQUEST_METHOD') === 'OPTIONS') {
-            $this->addCorsHeaders($response, $request);
-            $response->setCode(200)->send();
-        }
-
         $this->addCorsHeaders($response, $request);
+
+        // O preflight se encerra aqui: não há controller a executar.
+        if ($request->server('REQUEST_METHOD') === 'OPTIONS') {
+            throw new HttpResponseException($response->setCode(204), "CORS preflight");
+        }
 
         return $controller;
     }
@@ -47,11 +58,13 @@ class Cors implements Middleware
     {
         $origin = $request->getHeader('Origin');
 
-        if ($this->isOriginAllowed($origin)) {
-            if (in_array('*', $this->config['allowed_origins']) && !$this->config['allow_credentials']) {
+        // Sem Origin não é uma requisição cross-origin; não há o que liberar.
+        if ($origin && $this->isOriginAllowed($origin)) {
+            if (in_array('*', $this->config['allowed_origins'], true)) {
                 $response->addHeader('Access-Control-Allow-Origin', '*');
             } else {
-                $response->addHeader('Access-Control-Allow-Origin', $origin ?: '*');
+                // Só chega aqui quando a origin consta da allowlist.
+                $response->addHeader('Access-Control-Allow-Origin', $origin);
             }
         }
 
@@ -75,14 +88,14 @@ class Cors implements Middleware
     private function isOriginAllowed(?string $origin): bool
     {
         if (!$origin) {
+            return false;
+        }
+
+        if (in_array('*', $this->config['allowed_origins'], true)) {
             return true;
         }
 
-        if (in_array('*', $this->config['allowed_origins'])) {
-            return true;
-        }
-
-        return in_array($origin, $this->config['allowed_origins']);
+        return in_array($origin, $this->config['allowed_origins'], true);
     }
 
     /**

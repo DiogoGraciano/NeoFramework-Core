@@ -14,6 +14,8 @@ use NeoFramework\Core\Commands\Migrate;
 use NeoFramework\Core\Commands\Queue\Clear;
 use NeoFramework\Core\Commands\Queue\Show;
 use NeoFramework\Core\Commands\Queue\Work;
+use NeoFramework\Core\Commands\Route\Cache as RouteCacheCommand;
+use NeoFramework\Core\Commands\Route\Clear as RouteClear;
 use NeoFramework\Core\Commands\Schedule\Run;
 use NeoFramework\Core\Commands\Schedule\Work as ScheduleWork;
 use NeoFramework\Core\Commands\Test;
@@ -53,6 +55,8 @@ $app->add(new Clear,"qc");
 $app->add(new Run,"sr");
 $app->add(new ScheduleWork,"sw");
 $app->add(new Test,"te");
+$app->add(new RouteCacheCommand,"rc");
+$app->add(new RouteClear,"rcl");
 
 $class = [];
 $folder = Functions::getRoot() . "App/Commands";

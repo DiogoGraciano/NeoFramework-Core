@@ -169,6 +169,14 @@ class JobEntity implements JsonSerializable
 
     public static function fromJson(string $json): self
     {
-        return self::fromArray(json_decode($json, true));
+        $data = json_decode($json, true);
+
+        // json_decode devolve null em JSON inválido; sem esta checagem o erro
+        // aparecia como TypeError dentro de fromArray, escondendo a causa.
+        if (!is_array($data) || !isset($data['class'])) {
+            throw new \InvalidArgumentException("JSON de job inválido ou incompleto.");
+        }
+
+        return self::fromArray($data);
     }
 }

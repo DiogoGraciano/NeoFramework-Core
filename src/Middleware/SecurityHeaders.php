@@ -5,6 +5,7 @@ namespace NeoFramework\Core\Middleware;
 use NeoFramework\Core\Interfaces\Middleware;
 use NeoFramework\Core\Abstract\Controller;
 use NeoFramework\Core\Response;
+use NeoFramework\Core\Url;
 
 class SecurityHeaders implements Middleware
 {
@@ -15,8 +16,11 @@ class SecurityHeaders implements Middleware
         $this->config = array_merge([
             'x-frame-options' => 'SAMEORIGIN',
             'x-content-type-options' => 'nosniff',
-            'referrer-policy' => 'no-referrer-when-downgrade',
-            'content-security-policy' => "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src * data:; font-src *; connect-src 'self'; media-src *;",
+            'referrer-policy' => 'strict-origin-when-cross-origin',
+            // Sem 'unsafe-inline'/'unsafe-eval': com eles a política não impede
+            // a execução de script injetado, que é o motivo de existir uma CSP.
+            // Quem precisar de script inline deve usar nonce ou hash.
+            'content-security-policy' => "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'",
             'permissions-policy' => "geolocation=(),microphone=(),camera=()",
             'strict-transport-security' => "max-age=31536000; includeSubDomains",
         ], $config);
@@ -27,9 +31,17 @@ class SecurityHeaders implements Middleware
         $response = $controller->getResponse();
 
         foreach ($this->config as $header => $value) {
-            if ($value) {
-                $response->addHeader($header, $value);
+            if (!$value) {
+                continue;
             }
+
+            // HSTS sobre HTTP é ignorado pelo navegador e só serve para
+            // confundir quem inspeciona a resposta.
+            if ($header === 'strict-transport-security' && !Url::isSecure()) {
+                continue;
+            }
+
+            $response->addHeader($header, $value);
         }
 
         return $controller;

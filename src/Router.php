@@ -5,6 +5,7 @@ use NeoFramework\Core\Attributes\Route;
 use NeoFramework\Core\Attributes\Middleware;
 use NeoFramework\Core\Middleware\Cors;
 use NeoFramework\Core\Middleware\SecurityHeaders;
+use NeoFramework\Core\Exceptions\HttpResponseException;
 use DI\Container;
 use NeoFramework\Core\Container as CoreContainer;
 use Exception;
@@ -49,12 +50,12 @@ final class Router{
 
     private function isCorsEnabled(): bool
     {
-        return env('CORS_ENABLED') == "true";
+        return filter_var(env('CORS_ENABLED', false), FILTER_VALIDATE_BOOLEAN);
     }
 
     private function isSecurityHeadersEnabled(): bool
     {
-        return env('SECURITY_HEADERS_ENABLED',"true") == "true";
+        return filter_var(env('SECURITY_HEADERS_ENABLED', true), FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
@@ -192,6 +193,16 @@ final class Router{
 
     private function findControllerInFolders($controller): bool
     {
+        // O mapa evita a varredura por diretórios e a sequência de class_exists
+        // a cada requisição. Em desenvolvimento ele é reconstruído na hora.
+        $map = RouteCache::get($this->folders);
+        $cached = $map['controllers'][strtolower((string) $controller)] ?? null;
+
+        if ($cached !== null && $this->isValidController($cached)) {
+            $this->setResolvedController($cached);
+            return true;
+        }
+
         $controllerName = ucfirst($controller);
 
         foreach ($this->folders as $folder) {
@@ -202,8 +213,7 @@ final class Router{
 
             foreach ($possibleControllers as $fullClassName) {
                 if ($this->isValidController($fullClassName)) {
-                    $this->namespace = $folder;
-                    $this->controller = basename(str_replace('\\', '/', $fullClassName));
+                    $this->setResolvedController($fullClassName);
                     return true;
                 }
             }
@@ -212,9 +222,47 @@ final class Router{
         return false;
     }
 
+    private function setResolvedController(string $fullClassName): void
+    {
+        $position = strrpos($fullClassName, '\\');
+
+        $this->namespace = $position === false ? '' : substr($fullClassName, 0, $position);
+        $this->controller = $position === false ? $fullClassName : substr($fullClassName, $position + 1);
+    }
+
     private function isValidController($className): bool
     {
         return class_exists($className) && is_subclass_of($className, 'NeoFramework\Core\Abstract\Controller');
+    }
+
+    /**
+     * Métodos a examinar em busca da rota.
+     *
+     * Com o mapa disponível, apenas os métodos que declaram uma rota são
+     * inspecionados; sem ele, cai para todos os métodos públicos. Os atributos
+     * continuam sendo instanciados por Reflection, então um mapa desatualizado
+     * apenas perde a otimização — nunca despacha a rota errada.
+     *
+     * @return array<int,\ReflectionMethod>
+     */
+    private function candidateMethods(ReflectionClass $reflection): array
+    {
+        $map = RouteCache::get($this->folders);
+        $declared = $map['routes'][$reflection->getName()] ?? null;
+
+        if (!$declared) {
+            return $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
+        }
+
+        $methods = [];
+
+        foreach ($declared as $route) {
+            if ($reflection->hasMethod($route['method'])) {
+                $methods[] = $reflection->getMethod($route['method']);
+            }
+        }
+
+        return $methods ?: $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
     }
     
     private function instatiateController(){
@@ -223,7 +271,7 @@ final class Router{
         $controller =  $this->container->get($controller);
 
         $ReflectionClass = new ReflectionClass($controller);
-        $methods = $ReflectionClass->getMethods();
+        $methods = $this->candidateMethods($ReflectionClass);
 
         $routeAttribute = null;
         $uri = null;
@@ -277,38 +325,48 @@ final class Router{
         Session::set("controller_namespace",$this->namespace); 
         Session::set("controller",$controller::class);
 
-        $response = new Response;
+        $initialResponse = new Response;
         $request = new Request;
 
         if($this->requiresCsrfValidation($controller,$routeAttribute,$request) && !Session::validateCsrfToken($request->getCsrfToken())){
-            $response->setCode(403)->addContent("Invalid or missing CSRF token.")->send();
+            $initialResponse->setCode(403)->addContent("Invalid or missing CSRF token.")->send();
             return;
         }
 
         $controller->setResquest($request);
-        $controller->setResponse($response);
+        $controller->setResponse($initialResponse);
 
-        foreach ($this->globalMiddlewares as $globalMiddleware) {
-            $controller = $globalMiddleware->before($controller);
+        try {
+            foreach ($this->globalMiddlewares as $globalMiddleware) {
+                $controller = $globalMiddleware->before($controller);
+            }
+
+            if($middlewareAttribute){
+                $controller = $middlewareAttribute->handleBefore($controller);
+            }
+
+            $response = $controller->$methodName(...$parameters);
+
+            if(!is_a($response,"NeoFramework\Core\Response"))
+                throw new Exception("The return of a controller method must be an instance of the Response method.");
+
+            // Um controller que devolve uma Response nova não pode descartar os
+            // cabeçalhos que os middlewares "before" já definiram.
+            $response->mergeHeadersFrom($initialResponse);
+
+            if($middlewareAttribute){
+                $response = $middlewareAttribute->handleAfter($response);
+            }
+
+            foreach (array_reverse($this->globalMiddlewares) as $globalMiddleware) {
+                $response = $globalMiddleware->after($response);
+            }
+        } catch (HttpResponseException $interruption) {
+            // Um middleware encerrou o fluxo (preflight CORS, autorização negada)
+            $interruption->getResponse()->send();
+            return;
         }
 
-        if($middlewareAttribute){
-            $controller = $middlewareAttribute->handleBefore($controller);
-        }
-
-        $response = $controller->$methodName(...$parameters);
-
-        if(!is_a($response,"NeoFramework\Core\Response"))
-            throw new Exception("The return of a controller method must be an instance of the Response method.");
-
-        if($middlewareAttribute){
-            $response = $middlewareAttribute->handleAfter($response);
-        }
-
-        foreach (array_reverse($this->globalMiddlewares) as $globalMiddleware) {
-            $response = $globalMiddleware->after($response);
-        }
-            
         $response->send();
     }
 
