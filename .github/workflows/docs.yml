@@ -10,6 +10,12 @@ on:
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
+# Mantém também as actions JavaScript no runtime atual. `setup-node` controla o
+# Node disponível para o build; esta variável controla o Node usado pelas
+# próprias actions, como configure-pages e deploy-pages.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
   contents: read
   pages: write
