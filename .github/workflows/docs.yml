@@ -3,11 +3,6 @@ name: documentação
 on:
   push:
     branches: [main]
-    paths:
-      - 'docs/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/docs.yml'
   workflow_dispatch:
 
 # Mantém também as actions JavaScript no runtime atual. `setup-node` controla o
