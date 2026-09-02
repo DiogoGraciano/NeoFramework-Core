@@ -19,6 +19,10 @@ services:
       - app
 
   php:
+    # RoadRunner e Swoole usam esta imagem como base. Nomeá-la faz o Compose
+    # etiquetar o resultado localmente em vez de os Dockerfiles filhos tentarem
+    # buscá-la no Docker Hub.
+    image: neoframework-core-php:latest
     build:
       context: .
       dockerfile: Dockerfile

@@ -164,8 +164,16 @@ jobs:
       # PHP-FPM, FrankenPHP, RoadRunner e Swoole. Postgres, Redis e MinIO sobem
       # junto, para que qualquer teste compartilhado pelo runtime use serviços
       # reais — inclusive o contract test S3, não um mock em memória.
+      # RoadRunner e Swoole partem da imagem local `neoframework-core-php:latest`.
+      # Construí-la antes dos filhos evita que builds paralelos tentem resolver esse
+      # nome como se fosse um repositório público no Docker Hub.
+      - name: Constrói a imagem PHP e os runtimes dependentes
+        run: |
+          docker compose build php fpm
+          docker compose build roadrunner swoole
+
       - name: Sobe runtimes e infraestrutura real
-        run: docker compose up -d --build php postgres mysql redis minio fpm nginx frankenphp roadrunner swoole
+        run: docker compose up -d php postgres mysql redis minio fpm nginx frankenphp roadrunner swoole
 
       - name: Instala dependências
         run: docker compose exec -T php composer install --prefer-dist --no-interaction --no-progress
