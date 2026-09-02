@@ -2,6 +2,11 @@
 
 HTTP framework for PHP 8.4 with PSR-7 messages, PSR-11 dependency injection, PSR-15 middleware, PSR-17 factories and PSR-3 logging.
 
+## Documentation
+
+The complete guide and API reference are published at
+[diogograciano.github.io/NeoFramework-Core](https://diogograciano.github.io/NeoFramework-Core/).
+
 ## Routing
 
 Routes are absolute and may be named. Controller prefixes and class/method middleware are supported.

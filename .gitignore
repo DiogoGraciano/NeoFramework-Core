@@ -12,3 +12,7 @@ tests-junit.xml
 /build/
 /Logs/infection.txt
 /Logs/infection-summary.txt
+
+# Tooling da documentação: são dependências e artefatos regeneráveis.
+/node_modules/
+/docs/.vitepress/dist/
