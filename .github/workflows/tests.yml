@@ -71,18 +71,6 @@ jobs:
           --health-timeout 5s
           --health-retries 20
 
-      minio:
-        image: bitnami/minio:latest
-        ports: ['9000:9000']
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-        options: >-
-          --health-cmd "curl -f http://localhost:9000/minio/health/live"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -108,6 +96,22 @@ jobs:
         with:
           working-directory: NeoFramework-Core
           dependency-versions: ${{ matrix.dependencies }}
+
+      # A imagem oficial não inicia sem o argumento `server /data`, e services
+      # do GitHub Actions não permitem declarar um command. Subimos o container
+      # explicitamente e só iniciamos a suíte depois do endpoint de vida responder.
+      - name: Sobe MinIO para o contract test S3
+        run: |
+          docker run --detach --name minio --publish 9000:9000 \
+            --env MINIO_ROOT_USER=minioadmin \
+            --env MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:9000/minio/health/live >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          docker logs minio
+          exit 1
 
       # O estilo é o check mais barato: roda primeiro para não gastar uma suíte
       # inteira antes de reprovar por import morto.
