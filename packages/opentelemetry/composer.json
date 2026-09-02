@@ -1,0 +1,21 @@
+{
+  "name": "diogodg/neoframework-opentelemetry",
+  "description": "OpenTelemetry observability adapter for NeoFramework Core",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.4",
+    "diogodg/neoframework": "^2.0",
+    "open-telemetry/api": "^1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "NeoFramework\\OpenTelemetry\\": "src/"
+    }
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "2.0.x-dev"
+    }
+  }
+}

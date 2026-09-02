@@ -1,9 +1,12 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core\Jobs\Drivers;
 
-use Exception;
 use DateTime;
+use Exception;
+use NeoFramework\Core\Config;
+use NeoFramework\Core\Config\QueueConfig;
 use NeoFramework\Core\Jobs\Entity\JobEntity;
 use NeoFramework\Core\Jobs\Interfaces\Client;
 use Redis as PhpRedis;
@@ -16,10 +19,11 @@ class Redis implements Client
 
     public function __construct(array $config = [])
     {
-        $host = $config['host'] ?? env("REDIS_HOST");
-        $port = $config['port'] ?? env("REDIS_PORT");
-        $password = $config['password'] ?? env("REDIS_PASSWORD", "");
-        $this->prefix = $config['prefix'] ?? $this->prefix;
+        $defaults = QueueConfig::from(Config::repository());
+        $host = $config['host'] ?? $defaults->redisHost;
+        $port = $config['port'] ?? $defaults->redisPort;
+        $password = $config['password'] ?? $defaults->redisPassword;
+        $this->prefix = $config['prefix'] ?? $defaults->redisPrefix;
 
         if (!$host || !$port) {
             throw new Exception("Redis host or port not configured");
@@ -143,7 +147,7 @@ class Redis implements Client
         $count = 0;
 
         // Get all scheduled jobs that are due
-        $jobs = $this->redis->zRangeByScore($scheduledQueueKey, 0, $now);
+        $jobs = $this->redis->zRangeByScore($scheduledQueueKey, '0', (string) $now);
 
         if (!empty($jobs)) {
             foreach ($jobs as $jobJson) {
@@ -158,7 +162,7 @@ class Redis implements Client
             }
 
             // Remove migrated jobs from the scheduled queue
-            $this->redis->zRemRangeByScore($scheduledQueueKey, 0, $now);
+            $this->redis->zRemRangeByScore($scheduledQueueKey, '0', (string) $now);
         }
 
         return $count;
@@ -172,7 +176,7 @@ class Redis implements Client
         try {
             $scheduledQueueKey = $this->getKey('scheduled', $queue);
             $now = time();
-            $jobsJson = $this->redis->zRangeByScore($scheduledQueueKey, 0, $now);
+            $jobsJson = $this->redis->zRangeByScore($scheduledQueueKey, '0', (string) $now);
 
             $jobs = [];
             foreach ($jobsJson as $jobJson) {
@@ -286,7 +290,7 @@ class Redis implements Client
 
     /**
      * Completely clears a specific queue
-     * 
+     *
      * @param string $queue Name of the queue to be cleared
      * @return int Number of jobs removed from the queue
      */

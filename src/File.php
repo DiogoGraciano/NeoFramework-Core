@@ -1,9 +1,10 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core;
 
 use finfo;
-use NeoFramework\Core\Enums\fileStorageDisk;
+use NeoFramework\Core\Enums\FileStorageDisk;
 
 class File extends \SplFileObject
 {
@@ -14,12 +15,12 @@ class File extends \SplFileObject
         return $finfo->file($this->getRealPath());
     }
 
-    public function save(?string $name = null,string $folder = "public/assets",fileStorageDisk $disk = fileStorageDisk::LOCAL):bool
+    public function save(?string $name = null,string $folder = "public/assets",FileStorageDisk $disk = FileStorageDisk::LOCAL):bool
     {
         $fileStorage = new FileStorage($disk,$folder);
 
-        if(is_null($name)){
-            $name = Functions::generateId();
+        if($name === null){
+            $name = Support\Id::randomHex(8);
         }
 
         return $fileStorage->saveFromString($name,$this->toString());
@@ -27,11 +28,11 @@ class File extends \SplFileObject
 
     public function toString():string
     {
-        return file_get_contents($this->getRealPath())?:"";
+        return file_get_contents($this->getRealPath()) ?: "";
     }
 
     public function toArray():array
     {
-        return json_decode($this->toString(),true)?:[];
+        return json_decode($this->toString(),true) ?: [];
     }
 }

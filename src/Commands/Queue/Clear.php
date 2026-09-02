@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core\Commands\Queue;
 
@@ -10,9 +11,9 @@ use NeoFramework\Core\Jobs\QueueManager;
 class Clear extends Command
 {
     public function __construct()
-    {   
+    {
         parent::__construct("queue:clear","Clear all of the jobs from the specified queue");
-        
+
         $this->version("1.0")->arguments('[queue]');
     }
 
@@ -24,10 +25,10 @@ class Clear extends Command
         }
 
         try{
-            echo $color->ok("Clear ".QueueManager::getInstance()->getClient()->clear($queue)." jobs from queue ".$queue.PHP_EOL);
+            echo $color->ok("Clear " . QueueManager::getInstance()->getClient()->clear($queue) . " jobs from queue " . $queue . PHP_EOL);
         }
         catch(Exception $e){
-            echo $color->error($e->getMessage().PHP_EOL.$e->getTraceAsString());
+            echo $color->error($e->getMessage() . PHP_EOL . $e->getTraceAsString());
         }
     }
 }

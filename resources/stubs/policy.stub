@@ -1,0 +1,15 @@
+<?php
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use NeoFramework\Core\Auth\IdentityInterface;
+use NeoFramework\Core\Auth\PolicyInterface;
+
+final class {{ class }} implements PolicyInterface
+{
+    public function allows(IdentityInterface $identity, mixed $subject = null): bool
+    {
+        return false;
+    }
+}

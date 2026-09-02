@@ -1,0 +1,26 @@
+<?php
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use NeoFramework\Core\Attributes\Email;
+use NeoFramework\Core\Attributes\Length;
+use NeoFramework\Core\Attributes\Rule;
+
+/**
+ * Entrada validada antes de chegar na action. Um payload inválido vira 422 em
+ * Problem Details — o controller só recebe o objeto quando ele já é válido.
+ *
+ * `#[Rule]` alcança o catálogo inteiro do motor. Ver docs/VALIDATION.md.
+ */
+final readonly class {{ class }}
+{
+    public function __construct(
+        #[Email]
+        public string $email,
+        #[Length(min: 8)]
+        public string $password,
+        #[Rule('between', [18, 120])]
+        public ?int $age = null,
+    ) {}
+}

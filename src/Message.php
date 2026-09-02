@@ -1,8 +1,7 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core;
-
-use NeoFramework\Core\Session;
 
 /**
  * Mensagens de uma requisição para a próxima (flash messages).
@@ -21,7 +20,7 @@ class Message
 
     public static function getError():array
     {
-        return Session::get("Error")?:[];
+        return Session::get("Error") ?: [];
     }
 
     public static function setError(...$erros):void
@@ -31,7 +30,7 @@ class Message
 
     public static function getMessage():array
     {
-        return Session::get("Message")?:[];
+        return Session::get("Message") ?: [];
     }
 
     public static function setMessage(...$Mensagens):void
@@ -41,7 +40,7 @@ class Message
 
     public static function getSuccess():array
     {
-        return Session::get("Sucessos")?:[];
+        return Session::get("Sucessos") ?: [];
     }
 
     public static function setSuccess(...$Sucessos):void

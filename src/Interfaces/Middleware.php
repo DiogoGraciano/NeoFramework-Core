@@ -1,13 +1,9 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core\Interfaces;
 
-use NeoFramework\Core\Abstract\Controller;
-use NeoFramework\Core\Response;
+use Psr\Http\Server\MiddlewareInterface;
 
-interface Middleware 
-{
-    public function before(Controller $controller):Controller;
-
-    public function after(Response $response):Response;
-}
+/** Alias de compatibilidade nominal; o contrato é integralmente PSR-15. */
+interface Middleware extends MiddlewareInterface {}

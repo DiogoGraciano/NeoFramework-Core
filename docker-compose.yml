@@ -12,6 +12,9 @@ services:
       - '5432:5432'
     environment:
       POSTGRES_PASSWORD: postgres
+      # O phpunit.xml aponta para este banco. Sem criá-lo aqui, a conexão falha
+      # e o trait de transação por teste nunca chega a ser exercitado.
+      POSTGRES_DB: neoorm_test
     networks:
       - app
 
@@ -23,7 +26,98 @@ services:
       - '80:80'
     volumes:
       - .:/var/www/html
+      # O path repo da NeoORM é montado com `"symlink": true`, então
+      # `vendor/diogodg/neoorm` é um link relativo que sai de `/var/www/html` e cai em
+      # `/var/www/NeoORM`. Sem este mount o link fica pendurado dentro do container e
+      # qualquer classe da biblioteca falha com "interface não encontrada" — um erro que
+      # parece de código e é de volume.
+      - ../NeoORM:/var/www/NeoORM
     working_dir: /var/www/html
+    networks:
+      - app
+
+  # S3 de verdade para o contract test dos discos. Sem ele o adapter S3 nunca
+  # executava: as dependências são opcionais e ninguém tem credencial da AWS no CI,
+  # então o único disco realmente coberto era o local.
+  minio:
+    image: minio/minio:latest
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - '9000:9000'
+    networks:
+      - app
+
+  # Runtimes persistentes servindo a aplicação-sonda de tests/runtime.
+  # Sem eles os adapters tinham só teste unitário: os critérios da §18 — memória
+  # estável e ausência de vazamento entre requisições — só são mensuráveis no
+  # processo real, servindo milhares de requisições.
+  frankenphp:
+    image: dunglas/frankenphp:latest
+    working_dir: /var/www/html
+    command: >-
+      frankenphp run --config /var/www/html/tests/runtime/Caddyfile
+    ports:
+      - '8080:8080'
+    volumes:
+      - .:/var/www/html
+      - ../NeoORM:/var/www/NeoORM
+    networks:
+      - app
+
+  roadrunner:
+    build:
+      context: .
+      dockerfile: Dockerfile.roadrunner
+    working_dir: /var/www/html
+    ports:
+      - '8081:8081'
+    volumes:
+      - .:/var/www/html
+      - ../NeoORM:/var/www/NeoORM
+    networks:
+      - app
+
+  swoole:
+    build:
+      context: .
+      dockerfile: Dockerfile.swoole
+    working_dir: /var/www/html
+    ports:
+      - '8082:8082'
+    volumes:
+      - .:/var/www/html
+      - ../NeoORM:/var/www/NeoORM
+    networks:
+      - app
+
+  # O PHP-FPM atende a mesma aplicação-sonda por Nginx. Um único filho deixa a
+  # medição de processo da suíte determinística e exercita o front controller
+  # tradicional junto dos workers persistentes.
+  fpm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /var/www/html
+    command: >-
+      sh -c 'cp tests/runtime/fpm-pool.conf /usr/local/etc/php-fpm.d/zz-runtime.conf && php-fpm -F'
+    volumes:
+      - .:/var/www/html
+      - ../NeoORM:/var/www/NeoORM
+    networks:
+      - app
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - '8083:8080'
+    volumes:
+      - .:/var/www/html:ro
+      - ./tests/runtime/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - fpm
     networks:
       - app
 

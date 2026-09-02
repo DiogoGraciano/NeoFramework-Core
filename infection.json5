@@ -1,0 +1,34 @@
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    // Começa por Routing, HTTP e Validation: é onde uma condição invertida em
+    // silêncio custa mais — uma rota que passa a casar o que não devia, um
+    // header condicional que responde 200 no lugar de 304, uma regra que
+    // aprova o que deveria recusar.
+    "source": {
+        "directories": [
+            "src/Routing",
+            "src/Http",
+            "src/Validation"
+        ],
+        "excludes": [
+            // Só delega para o pool configurado; mutar aqui produz mutante que
+            // nenhum teste unitário poderia matar sem um backend de verdade.
+            "Observability"
+        ]
+    },
+    "mutators": {
+        "@default": true
+    },
+    "logs": {
+        "text": "Logs/infection.txt",
+        "summary": "Logs/infection-summary.txt"
+    },
+    "phpUnit": {
+        "configDir": "."
+    },
+    "testFramework": "phpunit",
+    // O grupo `runtime` sobe FrankenPHP e RoadRunner; rodá-lo por mutante
+    // deixaria a análise em horas sem cobrir nada a mais.
+    "testFrameworkOptions": "--exclude-group runtime",
+    "timeout": 120
+}

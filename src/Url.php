@@ -1,6 +1,10 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core;
+
+use NeoFramework\Core\Config\AppConfig;
+use NeoFramework\Core\Config\HttpConfig;
 
 final class Url
 {
@@ -46,7 +50,7 @@ final class Url
         }
 
         if(substr_count($uri,'/') > 1){
-            list($controller) = array_values(array_filter(explode('/',$uri)));
+            [$controller] = array_values(array_filter(explode('/',$uri)));
             return (($controller));
         }
         return ((ltrim($uri,"/")));
@@ -90,7 +94,7 @@ final class Url
      */
     public static function isFromTrustedProxy(): bool
     {
-        $trusted = array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES'))));
+        $trusted = HttpConfig::from(Config::repository())->trustedProxies;
 
         if (!$trusted) {
             return false;
@@ -111,7 +115,7 @@ final class Url
      */
     public static function getUrlBase(): string
     {
-        $appUrl = (string) env('APP_URL');
+        $appUrl = AppConfig::from(Config::repository())->url;
 
         if ($appUrl !== '') {
             return rtrim($appUrl, '/') . '/';
@@ -128,7 +132,7 @@ final class Url
     private static function resolveHost(): string
     {
         $host = (string) ($_SERVER['HTTP_HOST'] ?? '');
-        $trusted = array_filter(array_map('trim', explode(',', (string) env('TRUSTED_HOSTS'))));
+        $trusted = HttpConfig::from(Config::repository())->trustedHosts;
 
         if ($host !== '' && self::isValidHost($host)) {
             if (!$trusted || in_array(strtolower($host), array_map('strtolower', $trusted), true)) {

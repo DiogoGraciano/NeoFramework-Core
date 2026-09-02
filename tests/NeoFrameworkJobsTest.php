@@ -1,13 +1,14 @@
 <?php
+declare(strict_types=1);
 
 namespace Tests;
 
 use DateTime;
 use Exception;
-use NeoFramework\Core\Jobs\Interfaces\Client;
-use NeoFramework\Core\Jobs\Drivers\Redis;
 use NeoFramework\Core\Jobs\Drivers\Files;
+use NeoFramework\Core\Jobs\Drivers\Redis;
 use NeoFramework\Core\Jobs\Entity\JobEntity;
+use NeoFramework\Core\Jobs\Interfaces\Client;
 use NeoFramework\Core\Jobs\JobProcessor;
 use NeoFramework\Core\Jobs\QueueManager;
 use PHPUnit\Framework\TestCase;
@@ -18,6 +19,13 @@ use Tests\JobsClass\TestJob;
 /**
  * Consolidated test class for NeoFramework Core Jobs
  */
+/**
+ * O mock do driver nasce no `setUp()` porque o `JobProcessor` exige um `Client` na
+ * construção, mas só os casos de processamento configuram expectativas nele. O
+ * atributo evita que os demais sejam apontados como mock sem expectativa — a
+ * alternativa seria duplicar a montagem do processor em cada um deles.
+ */
+#[\PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations]
 class NeoFrameworkJobsTest extends TestCase
 {
     private Client $driver;
@@ -25,43 +33,45 @@ class NeoFrameworkJobsTest extends TestCase
     private $processor;
     private string $testPrefix = 'test:neoframework:jobs:';
     private string $driverType = 'redis'; // Can be 'redis' or 'files'
+    private string $storagePath = '';
 
     /**
      * @before
+     *
+     * O driver de arquivos recebe um diretório PRÓPRIO por teste.
+     *
+     * Antes o caminho da limpeza vinha de `env("JOBS_STORAGE_PATH")` enquanto o
+     * driver passou a resolvê-lo pelo Config, cujo default é
+     * /tmp/neoframework_jobs: limpava-se um diretório e escrevia-se em outro, e
+     * a fila acumulava entre os casos. Um diretório por teste corrige o
+     * descasamento e elimina de vez a fila compartilhada entre os 26 casos.
      */
     protected function setUp(): void
     {
-        // Get driver type from environment or use default (redis)
         $this->driverType = env('QUEUE_DRIVER') ?? "files";
 
         // Setup for tests using mocks
         $this->driverMock = $this->createMock(Client::class);
         $this->processor = new JobProcessor($this->driverMock);
 
-        // Setup for integration tests
         try {
             if ($this->driverType === 'redis') {
-                // Create Redis driver
-                $config = [
+                $this->driver = new Redis([
                     'prefix' => $this->testPrefix,
                     'host' => env("REDIS_HOST"),
                     'port' => env("REDIS_PORT"),
                     'password' => env("REDIS_PASSWORD")
-                ];
-                
-                $this->driver = new Redis($config);
+                ]);
                 $this->cleanupRedisBeforeTest();
             } else {
-                // Create files driver
-                $config = [
-                    'prefix' => 'test_'
-                ];
-                
-                $this->driver = new Files($config);
-                $this->cleanupFileJsonBeforeTest(env("JOBS_STORAGE_PATH"));
+                $this->storagePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR
+                    . 'neoframework_jobs_test_' . bin2hex(random_bytes(8));
+                $this->cleanupFileJsonBeforeTest($this->storagePath);
+                $this->driver = new Files(['prefix' => 'test_', 'path' => $this->storagePath]);
             }
         } catch (\Exception $e) {
-            // Ignore errors here, only integration tests will be skipped
+            // Indisponibilidade real do driver é a ÚNICA razão legítima para pular.
+            $this->markTestSkipped('Driver de filas indisponível: ' . $e->getMessage());
         }
     }
 
@@ -115,7 +125,7 @@ class NeoFrameworkJobsTest extends TestCase
         if (file_exists($tempDir)) {
             $this->recursiveRemoveDirectory($tempDir);
         }
-        
+
         // Recreate the directory
         mkdir($tempDir, 0755, true);
     }
@@ -128,13 +138,13 @@ class NeoFrameworkJobsTest extends TestCase
         if (!is_dir($directory)) {
             return;
         }
-        
+
         $items = scandir($directory);
         foreach ($items as $item) {
             if ($item === '.' || $item === '..') {
                 continue;
             }
-            
+
             $path = $directory . '/' . $item;
             if (is_dir($path)) {
                 $this->recursiveRemoveDirectory($path);
@@ -142,7 +152,7 @@ class NeoFrameworkJobsTest extends TestCase
                 unlink($path);
             }
         }
-        
+
         rmdir($directory);
     }
 
@@ -151,16 +161,14 @@ class NeoFrameworkJobsTest extends TestCase
      */
     protected function tearDown(): void
     {
-        // Clean all data after tests as well
         try {
             if ($this->driverType === 'redis') {
                 $this->cleanupRedisBeforeTest();
-            } else {
-                // For files, the temp directory will be removed automatically
-                // when the test framework exits
+            } elseif ($this->storagePath !== '') {
+                $this->recursiveRemoveDirectory($this->storagePath);
             }
         } catch (Exception $e) {
-            // Ignore errors here, only integration tests were affected
+            // Limpeza best-effort: falha aqui não deve mascarar o resultado.
         }
     }
 
@@ -255,298 +263,226 @@ class NeoFrameworkJobsTest extends TestCase
 
     public function testEnqueueAddsJobToQueue(): void
     {
-        try {
-            $job = new JobEntity('TestJob', ['arg1', 'arg2'], null);
+        $job = new JobEntity('TestJob', ['arg1', 'arg2'], null);
 
-            $result = $this->driver->enqueue($job);
-            $size = $this->driver->size();
+        $result = $this->driver->enqueue($job);
+        $size = $this->driver->size();
 
-            $this->assertTrue($result);
-            $this->assertEquals(1, $size, 'Queue should contain 1 job after enqueuing');
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        $this->assertTrue($result);
+        $this->assertEquals(1, $size, 'Queue should contain 1 job after enqueuing');
     }
 
     public function testScheduleJobAddsJobToScheduledQueue(): void
     {
-        try {
-            $job = new JobEntity('TestJob', ['arg1', 'arg2'], new DateTime('+1 hour'));
+        $job = new JobEntity('TestJob', ['arg1', 'arg2'], new DateTime('+1 hour'));
 
-            $result = $this->driver->scheduleJob($job);
+        $result = $this->driver->scheduleJob($job);
 
-            $this->assertTrue($result);
+        $this->assertTrue($result);
 
-            // Check if job is in scheduled queue
-            $dueJobs = $this->driver->getDueJobs();
-            $this->assertCount(0, $dueJobs, 'Should have no due jobs now (job was scheduled for the future)');
+        // Check if job is in scheduled queue
+        $dueJobs = $this->driver->getDueJobs();
+        $this->assertCount(0, $dueJobs, 'Should have no due jobs now (job was scheduled for the future)');
 
-            // Check if job details can be found
-            $jobs = $this->driver->getJobs();
-            $this->assertCount(0, $jobs, 'Should have no jobs in main queue');
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        // Check if job details can be found
+        $jobs = $this->driver->getJobs();
+        $this->assertCount(0, $jobs, 'Should have no jobs in main queue');
     }
 
     public function testDequeueReturnsAndRemovesJobFromQueue(): void
     {
-        try {
-            // Create and enqueue a job
-            $job = new JobEntity('TestJob', ['arg1', 'arg2'], null);
-            $this->driver->enqueue($job);
+        // Create and enqueue a job
+        $job = new JobEntity('TestJob', ['arg1', 'arg2'], null);
+        $this->driver->enqueue($job);
 
-            // Check if there's 1 job in the queue
-            $sizeBefore = $this->driver->size();
-            $this->assertEquals(1, $sizeBefore, 'Queue should contain 1 job before dequeuing');
+        // Check if there's 1 job in the queue
+        $sizeBefore = $this->driver->size();
+        $this->assertEquals(1, $sizeBefore, 'Queue should contain 1 job before dequeuing');
 
-            // Dequeue the job
-            $dequeued = $this->driver->dequeue();
+        // Dequeue the job
+        $dequeued = $this->driver->dequeue();
 
-            // Check returned job details
-            $this->assertInstanceOf(JobEntity::class, $dequeued);
-            $this->assertEquals('TestJob', $dequeued->getClass());
-            $this->assertEquals(['arg1', 'arg2'], $dequeued->getArgs());
-            $this->assertEquals('processing', $dequeued->getStatus());
+        // Check returned job details
+        $this->assertInstanceOf(JobEntity::class, $dequeued);
+        $this->assertEquals('TestJob', $dequeued->getClass());
+        $this->assertEquals(['arg1', 'arg2'], $dequeued->getArgs());
+        $this->assertEquals('processing', $dequeued->getStatus());
 
-            // Check if job was removed from queue
-            $sizeAfter = $this->driver->size();
-            $this->assertEquals(0, $sizeAfter, 'Queue should be empty after dequeuing');
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        // Check if job was removed from queue
+        $sizeAfter = $this->driver->size();
+        $this->assertEquals(0, $sizeAfter, 'Queue should be empty after dequeuing');
     }
 
     public function testMigrateScheduledJobsMovesJobsToMainQueue(): void
     {
-        try {
-            // Create jobs with past dates
-            $pastDate = new DateTime('-1 hour');
-            $job1 = new JobEntity('TestJob1', ['arg1'], $pastDate);
-            $job2 = new JobEntity('TestJob2', ['arg2'], $pastDate);
+        // Create jobs with past dates
+        $pastDate = new DateTime('-1 hour');
+        $job1 = new JobEntity('TestJob1', ['arg1'], $pastDate);
+        $job2 = new JobEntity('TestJob2', ['arg2'], $pastDate);
 
-            // Schedule jobs (which are in the past)
-            $this->driver->scheduleJob($job1);
-            $this->driver->scheduleJob($job2);
+        // Schedule jobs (which are in the past)
+        $this->driver->scheduleJob($job1);
+        $this->driver->scheduleJob($job2);
 
-            // Check main queue before migration
-            $sizeBefore = $this->driver->size();
-            $this->assertEquals(0, $sizeBefore, 'Main queue should be empty before migration');
+        // Check main queue before migration
+        $sizeBefore = $this->driver->size();
+        $this->assertEquals(0, $sizeBefore, 'Main queue should be empty before migration');
 
-            // Migrate jobs
-            $count = $this->driver->migrateScheduledJobs();
+        // Migrate jobs
+        $count = $this->driver->migrateScheduledJobs();
 
-            // Check if two jobs were migrated
-            $this->assertEquals(2, $count, 'Two jobs should have been migrated');
+        // Check if two jobs were migrated
+        $this->assertEquals(2, $count, 'Two jobs should have been migrated');
 
-            // Check main queue after migration
-            $sizeAfter = $this->driver->size();
-            $this->assertEquals(2, $sizeAfter, 'Main queue should contain 2 jobs after migration');
+        // Check main queue after migration
+        $sizeAfter = $this->driver->size();
+        $this->assertEquals(2, $sizeAfter, 'Main queue should contain 2 jobs after migration');
 
-            // Check if scheduled queue is empty
-            $dueJobs = $this->driver->getDueJobs();
-            $this->assertCount(0, $dueJobs, 'Scheduled queue should be empty after migration');
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        // Check if scheduled queue is empty
+        $dueJobs = $this->driver->getDueJobs();
+        $this->assertCount(0, $dueJobs, 'Scheduled queue should be empty after migration');
     }
 
     public function testLockCreatesLockForJob(): void
     {
-        try {
-            $jobId = 'job_' . uniqid();
+        $jobId = 'job_' . uniqid();
 
-            // Create a lock
-            $result = $this->driver->lock($jobId);
-            $this->assertTrue($result, 'Should be able to create a lock for the job');
+        // Create a lock
+        $result = $this->driver->lock($jobId);
+        $this->assertTrue($result, 'Should be able to create a lock for the job');
 
-            // Try to create a second lock (which should fail)
-            $secondLock = $this->driver->lock($jobId);
-            $this->assertFalse($secondLock, 'Should not be able to create a second lock for the same job');
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        // Try to create a second lock (which should fail)
+        $secondLock = $this->driver->lock($jobId);
+        $this->assertFalse($secondLock, 'Should not be able to create a second lock for the same job');
     }
 
     public function testUnlockRemovesLockForJob(): void
     {
-        try {
-            $jobId = 'job_' . uniqid();
+        $jobId = 'job_' . uniqid();
 
-            // Create a lock
-            $this->driver->lock($jobId);
+        // Create a lock
+        $this->driver->lock($jobId);
 
-            // Remove the lock
-            $result = $this->driver->unlock($jobId);
-            $this->assertTrue($result, 'Should be able to remove the lock');
+        // Remove the lock
+        $result = $this->driver->unlock($jobId);
+        $this->assertTrue($result, 'Should be able to remove the lock');
 
-            // Check if can create a new lock after removal
-            $newLock = $this->driver->lock($jobId);
-            $this->assertTrue($newLock, 'Should be able to create a new lock after removing the previous one');
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        // Check if can create a new lock after removal
+        $newLock = $this->driver->lock($jobId);
+        $this->assertTrue($newLock, 'Should be able to create a new lock after removing the previous one');
     }
 
     public function testSizeReturnsQueueLength(): void
     {
-        try {
-            // Initially, queue should be empty
-            $size = $this->driver->size();
-            $this->assertEquals(0, $size, 'Queue should be empty initially');
+        // Initially, queue should be empty
+        $size = $this->driver->size();
+        $this->assertEquals(0, $size, 'Queue should be empty initially');
 
-            // Add 3 jobs
-            $job1 = new JobEntity('TestJob1', [], null);
-            $job2 = new JobEntity('TestJob2', [], null);
-            $job3 = new JobEntity('TestJob3', [], null);
+        // Add 3 jobs
+        $job1 = new JobEntity('TestJob1', [], null);
+        $job2 = new JobEntity('TestJob2', [], null);
+        $job3 = new JobEntity('TestJob3', [], null);
 
-            $this->driver->enqueue($job1);
-            $this->driver->enqueue($job2);
-            $this->driver->enqueue($job3);
+        $this->driver->enqueue($job1);
+        $this->driver->enqueue($job2);
+        $this->driver->enqueue($job3);
 
-            // Check queue size
-            $size = $this->driver->size();
-            $this->assertEquals(3, $size, 'Queue should contain 3 jobs');
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        // Check queue size
+        $size = $this->driver->size();
+        $this->assertEquals(3, $size, 'Queue should contain 3 jobs');
     }
 
     public function testGetJobsReturnsJobsFromQueue(): void
     {
-        try {
-            // Add 2 jobs
-            $job1 = new JobEntity('TestJob1', ['arg1'], null);
-            $job2 = new JobEntity('TestJob2', ['arg2'], null);
+        // Add 2 jobs
+        $job1 = new JobEntity('TestJob1', ['arg1'], null);
+        $job2 = new JobEntity('TestJob2', ['arg2'], null);
 
-            $this->driver->enqueue($job1);
-            $this->driver->enqueue($job2);
+        $this->driver->enqueue($job1);
+        $this->driver->enqueue($job2);
 
-            // Get jobs
-            $jobs = $this->driver->getJobs();
+        // Get jobs
+        $jobs = $this->driver->getJobs();
 
-            // Check if returned 2 jobs
-            $this->assertCount(2, $jobs, 'Should return 2 jobs');
+        // Check if returned 2 jobs
+        $this->assertCount(2, $jobs, 'Should return 2 jobs');
 
-            // Check job details
-            // Note: order may vary depending on implementation (LIFO or FIFO)
-            $classes = [$jobs[0]->getClass(), $jobs[1]->getClass()];
-            $this->assertContains('TestJob1', $classes);
-            $this->assertContains('TestJob2', $classes);
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        // Check job details
+        // Note: order may vary depending on implementation (LIFO or FIFO)
+        $classes = [$jobs[0]->getClass(), $jobs[1]->getClass()];
+        $this->assertContains('TestJob1', $classes);
+        $this->assertContains('TestJob2', $classes);
     }
 
     public function testRetryAddsJobBackToQueue(): void
     {
-        try {
-            // Create and dequeue a job
-            $job = new JobEntity('TestJob', ['arg1'], null);
-            $this->driver->enqueue($job);
-            $job = $this->driver->dequeue();
+        // Create and dequeue a job
+        $job = new JobEntity('TestJob', ['arg1'], null);
+        $this->driver->enqueue($job);
+        $job = $this->driver->dequeue();
 
-            // Check if queue is empty
-            $sizeBefore = $this->driver->size();
-            $this->assertEquals(0, $sizeBefore, 'Queue should be empty after dequeuing');
+        // Check if queue is empty
+        $sizeBefore = $this->driver->size();
+        $this->assertEquals(0, $sizeBefore, 'Queue should be empty after dequeuing');
 
-            // Retry the job
-            $result = $this->driver->retry($job, 'default', 2);
-            $this->assertTrue($result, 'Should be able to retry the job');
+        // Retry the job
+        $result = $this->driver->retry($job, 'default', 2);
+        $this->assertTrue($result, 'Should be able to retry the job');
 
-            // Check if job was added back to queue
-            $sizeAfter = $this->driver->size();
-            $this->assertEquals(1, $sizeAfter, 'Queue should contain 1 job after retrying');
+        // Check if job was added back to queue
+        $sizeAfter = $this->driver->size();
+        $this->assertEquals(1, $sizeAfter, 'Queue should contain 1 job after retrying');
 
-            // Check retried job details
-            $retriedJob = $this->driver->dequeue();
-            $this->assertEquals('TestJob', $retriedJob->getClass());
-            $this->assertEquals(2, $retriedJob->getAttempts(), 'Job should have 2 attempts');
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        // Check retried job details
+        $retriedJob = $this->driver->dequeue();
+        $this->assertEquals('TestJob', $retriedJob->getClass());
+        $this->assertEquals(2, $retriedJob->getAttempts(), 'Job should have 2 attempts');
     }
 
     public function testGetDueJobsReturnsScheduledJobsDue(): void
     {
-        try {
-            // Create a job scheduled for the past
-            $pastDate = new DateTime('-1 hour');
-            $job = new JobEntity('TestJob', ['arg1'], $pastDate);
+        // Create a job scheduled for the past
+        $pastDate = new DateTime('-1 hour');
+        $job = new JobEntity('TestJob', ['arg1'], $pastDate);
 
-            // Schedule the job
-            $this->driver->scheduleJob($job);
+        // Schedule the job
+        $this->driver->scheduleJob($job);
 
-            // Get due jobs
-            $dueJobs = $this->driver->getDueJobs();
+        // Get due jobs
+        $dueJobs = $this->driver->getDueJobs();
 
-            // Check if returned 1 job
-            $this->assertCount(1, $dueJobs, 'Should return 1 due job');
-            $this->assertEquals('TestJob', $dueJobs[0]->getClass());
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        // Check if returned 1 job
+        $this->assertCount(1, $dueJobs, 'Should return 1 due job');
+        $this->assertEquals('TestJob', $dueJobs[0]->getClass());
     }
 
     public function testMarkAsCompletedUpdatesJobStatus(): void
     {
-        try {
-            // Create and enqueue a job
-            $job = new JobEntity('TestJob', ['arg1'], null);
-            $this->driver->enqueue($job);
-            $job = $this->driver->dequeue();
+        // Create and enqueue a job
+        $job = new JobEntity('TestJob', ['arg1'], null);
+        $this->driver->enqueue($job);
+        $job = $this->driver->dequeue();
 
-            // Mark job as completed
-            $result = $this->driver->markAsCompleted($job, 'Job result');
-            $this->assertTrue($result, 'Should be able to mark job as completed');
+        // Mark job as completed
+        $result = $this->driver->markAsCompleted($job, 'Job result');
+        $this->assertTrue($result, 'Should be able to mark job as completed');
 
-            // Note: We would need to add a method to retrieve specific job details
-            // or check in a real database
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        // Note: We would need to add a method to retrieve specific job details
+        // or check in a real database
     }
 
     public function testMarkAsFailedUpdatesJobStatusAndAddsToFailedQueue(): void
     {
-        try {
-            // Create and enqueue a job
-            $job = new JobEntity('TestJob', ['arg1'], null);
-            $this->driver->enqueue($job);
-            $job = $this->driver->dequeue();
+        // Create and enqueue a job
+        $job = new JobEntity('TestJob', ['arg1'], null);
+        $this->driver->enqueue($job);
+        $job = $this->driver->dequeue();
 
-            // Mark job as failed
-            $result = $this->driver->markAsFailed($job, 'Test error');
-            $this->assertTrue($result, 'Should be able to mark job as failed');
+        // Mark job as failed
+        $result = $this->driver->markAsFailed($job, 'Test error');
+        $this->assertTrue($result, 'Should be able to mark job as failed');
 
-            // Note: We would need to add additional methods to check the failed queue
-        } catch (Exception $e) {
-            $this->markTestSkipped(
-                'Could not connect to driver: ' . $e->getMessage()
-            );
-        }
+        // Note: We would need to add additional methods to check the failed queue
     }
 
     // ===== JOB PROCESSOR TESTS =====

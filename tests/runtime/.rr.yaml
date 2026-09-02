@@ -1,0 +1,17 @@
+version: '3'
+
+server:
+  # Absoluto: o RoadRunner spawna o worker a partir do cwd DELE, não do arquivo.
+  command: 'php /var/www/html/tests/runtime/worker-roadrunner.php'
+
+http:
+  address: 0.0.0.0:8081
+  pool:
+    # Um worker só: o teste precisa que requisições consecutivas caiam no MESMO
+    # processo, que é onde um vazamento entre elas apareceria.
+    num_workers: 1
+    max_jobs: 0
+
+logs:
+  mode: production
+  level: error

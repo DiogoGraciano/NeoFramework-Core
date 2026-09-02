@@ -1,0 +1,7 @@
+# O RoadRunner é um binário Go que fala com workers PHP por socket; a imagem
+# junta o binário oficial ao mesmo PHP que a suíte usa.
+FROM neoframework-core-php:latest
+
+COPY --from=ghcr.io/roadrunner-server/roadrunner:latest /usr/bin/rr /usr/local/bin/rr
+
+CMD ["rr", "serve", "-c", "/var/www/html/tests/runtime/.rr.yaml"]

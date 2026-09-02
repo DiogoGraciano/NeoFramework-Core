@@ -1,0 +1,19 @@
+<?php
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Ahc\Cli\Input\Command;
+
+final class {{ class }} extends Command
+{
+    public function __construct()
+    {
+        parent::__construct('app:command', 'Describe this command');
+    }
+
+    public function execute(): int
+    {
+        return 0;
+    }
+}

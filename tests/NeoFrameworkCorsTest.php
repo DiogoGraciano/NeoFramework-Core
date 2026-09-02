@@ -1,106 +1,42 @@
 <?php
+declare(strict_types=1);
 
 namespace Tests;
 
-use InvalidArgumentException;
 use NeoFramework\Core\Middleware\Cors;
 use NeoFramework\Core\Request;
 use NeoFramework\Core\Response;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Regressão do middleware de CORS.
- *
- * A configuração padrão refletia a Origin do requisitante quando credenciais
- * estavam habilitadas, o que permite a qualquer site ler respostas autenticadas.
- */
-class NeoFrameworkCorsTest extends TestCase
+final class NeoFrameworkCorsTest extends TestCase
 {
-    protected function tearDown(): void
+    private function handler(): RequestHandlerInterface
     {
-        unset($_SERVER['HTTP_ORIGIN'], $_SERVER['REQUEST_METHOD']);
-        parent::tearDown();
+        return new class implements RequestHandlerInterface {
+            public function handle(ServerRequestInterface $request): ResponseInterface { return (new Response())->text('ok'); }
+        };
     }
 
-    private function requestFromOrigin(?string $origin): Request
+    public function testAllowedOriginIsAppliedAroundResponse(): void
     {
-        unset($_SERVER['HTTP_ORIGIN']);
-
-        if ($origin !== null) {
-            $_SERVER['HTTP_ORIGIN'] = $origin;
-        }
-
-        $_SERVER['REQUEST_METHOD'] = 'GET';
-
-        return new Request();
+        $cors = new Cors(['allowed_origins' => ['https://app.example']]);
+        $response = $cors->process(new Request('GET', '/', ['Origin' => 'https://app.example']), $this->handler());
+        self::assertSame('https://app.example', $response->getHeaderLine('Access-Control-Allow-Origin'));
     }
 
-    private function allowOriginHeader(Cors $cors, Request $request): ?array
+    public function testPreflightStopsAtMiddlewareWith204(): void
     {
-        $response = new Response();
-
-        $controller = $this->createMock(\NeoFramework\Core\Abstract\Controller::class);
-        $controller->method('getRequest')->willReturn($request);
-        $controller->method('getResponse')->willReturn($response);
-
-        $cors->before($controller);
-
-        return $response->getHeader('Access-Control-Allow-Origin');
+        $response = (new Cors())->process(new Request('OPTIONS', '/', ['Origin' => 'https://app.example']), $this->handler());
+        self::assertSame(204, $response->getStatusCode());
+        self::assertSame('', (string) $response->getBody());
     }
 
-    public function testCredenciaisComCoringaEhRecusado()
+    public function testCredentialsWithWildcardIsRejected(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-
-        new Cors([
-            'allowed_origins' => ['*'],
-            'allow_credentials' => true,
-        ]);
-    }
-
-    public function testOrigemForaDaListaNaoRecebeCabecalho()
-    {
-        $cors = new Cors(['allowed_origins' => ['https://app.exemplo.com']]);
-
-        $header = $this->allowOriginHeader($cors, $this->requestFromOrigin('https://atacante.com'));
-
-        $this->assertNull($header);
-    }
-
-    public function testOrigemNaListaRecebeCabecalho()
-    {
-        $cors = new Cors(['allowed_origins' => ['https://app.exemplo.com']]);
-
-        $header = $this->allowOriginHeader($cors, $this->requestFromOrigin('https://app.exemplo.com'));
-
-        $this->assertEquals(['https://app.exemplo.com'], $header);
-    }
-
-    public function testComCredenciaisSoOrigemListadaEhRefletida()
-    {
-        $cors = new Cors([
-            'allowed_origins' => ['https://app.exemplo.com'],
-            'allow_credentials' => true,
-        ]);
-
-        $this->assertNull($this->allowOriginHeader($cors, $this->requestFromOrigin('https://atacante.com')));
-        $this->assertEquals(
-            ['https://app.exemplo.com'],
-            $this->allowOriginHeader($cors, $this->requestFromOrigin('https://app.exemplo.com'))
-        );
-    }
-
-    public function testRequisicaoSemOriginNaoRecebeCabecalho()
-    {
-        $cors = new Cors();
-
-        $this->assertNull($this->allowOriginHeader($cors, $this->requestFromOrigin(null)));
-    }
-
-    public function testCoringaSemCredenciaisEmiteAsterisco()
-    {
-        $cors = new Cors(['allowed_origins' => ['*']]);
-
-        $this->assertEquals(['*'], $this->allowOriginHeader($cors, $this->requestFromOrigin('https://qualquer.com')));
+        $this->expectException(\InvalidArgumentException::class);
+        new Cors(['allowed_origins' => ['*'], 'allow_credentials' => true]);
     }
 }

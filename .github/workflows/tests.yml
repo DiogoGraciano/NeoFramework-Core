@@ -1,0 +1,191 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# A NeoORM entra por path repository: os dois pacotes são desenvolvidos em paralelo
+# e a 2.x ainda não está no Packagist. O checkout lado a lado reproduz o layout que
+# `composer.json` espera — `../NeoORM` a partir do Core — e é por isso que o Core é
+# clonado num subdiretório em vez da raiz do workspace.
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: NeoFramework-Core
+
+    # A matriz existe para provar que os constraints do composer.json são verdade.
+    # `lowest` resolve a menor versão que cada `^x.y` admite: se o código passou a
+    # depender de algo mais novo sem alguém subir o constraint, é aqui que aparece —
+    # e não na instalação de quem consumir o pacote.
+    strategy:
+      fail-fast: false
+      matrix:
+        dependencies: [lowest, highest]
+
+    # O phpunit.xml aponta para os hosts do docker-compose. As entradas <env> do
+    # PHPUnit não sobrescrevem variáveis já definidas, então declarar o serviço do
+    # CI aqui faz os testes de Redis rodarem de fato em vez de se marcarem como
+    # pulados — que é como uma regressão no driver passaria despercebida.
+    env:
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ''
+      # O contract test dos discos cobre o adapter S3 contra o MinIO abaixo. Sem
+      # isso o único disco realmente exercitado seria o local.
+      AWS_ENDPOINT: http://127.0.0.1:9000
+      AWS_BUCKETNAME: neoframework-test
+      AWS_REGION: us-east-1
+      AWS_KEY: minioadmin
+      AWS_SECRET: minioadmin
+      # O trait `DatabaseTransactions` roda contra o Postgres abaixo. Sem ele o
+      # isolamento por transação seria código publicado que nunca executou.
+      DBHOST: 127.0.0.1
+
+    services:
+      redis:
+        image: redis:latest
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+      postgres:
+        image: postgres:17
+        ports: ['5432:5432']
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: neoorm_test
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+      minio:
+        image: bitnami/minio:latest
+        ports: ['9000:9000']
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: NeoFramework-Core
+
+      - uses: actions/checkout@v4
+        with:
+          repository: DiogoGraciano/NeoORM
+          path: NeoORM
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          # intl é obrigatório: Support\Date::localized() e Support\Money::format() usam
+          # IntlDateFormatter e NumberFormatter. sockets é exigido pelo SDK do RoadRunner.
+          extensions: pdo, pdo_mysql, pdo_pgsql, json, mbstring, intl, exif, gd, sockets, redis
+          # pcov e não xdebug: o Infection precisa de um driver de cobertura, e o
+          # xdebug deixaria a suíte inteira várias vezes mais lenta.
+          coverage: pcov
+
+      - name: Instala dependências
+        uses: ramsey/composer-install@v3
+        with:
+          working-directory: NeoFramework-Core
+          dependency-versions: ${{ matrix.dependencies }}
+
+      # O estilo é o check mais barato: roda primeiro para não gastar uma suíte
+      # inteira antes de reprovar por import morto.
+      - name: Estilo
+        run: vendor/bin/php-cs-fixer check --diff
+
+      # A análise estática vem antes da suíte: um erro de tipo é mais barato de ler
+      # do que a falha em cascata que ele provoca nos testes.
+      - name: Análise estática
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      # O grupo `runtime` exige FPM, FrankenPHP, RoadRunner e Swoole, e tem job próprio.
+      - name: Suíte
+        run: vendor/bin/phpunit --exclude-group runtime
+
+      # A ordem aleatória é a defesa contra teste que passa por acidente de
+      # vizinhança. A causa das falhas anteriores não era fixture de fila
+      # compartilhada, como se supunha: `NeoFrameworkLayoutTest` e
+      # `NeoFrameworkViteTest` faziam `$_ENV = []`, apagando as variáveis que o
+      # phpunit.xml injeta e derrubando os 26 casos de Jobs em qualquer ordem que
+      # os colocasse depois. Agora os dois guardam e restauram o ambiente.
+      - name: Suíte em ordem aleatória
+        run: vendor/bin/phpunit --exclude-group runtime --order-by=random --random-order-seed=${{ github.run_id }}
+
+      # Só na perna `highest`: o teste de mutação mede a qualidade da suíte, que
+      # não muda com a versão das dependências — rodá-lo duas vezes só dobraria
+      # o tempo do job.
+      - name: Teste de mutação
+        if: matrix.dependencies == 'highest'
+        run: composer test:mutation
+
+  # Os critérios de aceite da §18 — memória estável, ausência de vazamento entre
+  # requisições, worker que sobrevive a exceção — só são mensuráveis no processo
+  # real servindo milhares de requisições. Teste unitário não os alcança, e sem
+  # este job FPM e cada runtime seriam caminhos publicados que nunca executou.
+  runtimes:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: NeoFramework-Core
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: NeoFramework-Core
+
+      - uses: actions/checkout@v4
+        with:
+          repository: DiogoGraciano/NeoORM
+          path: NeoORM
+
+      # O mesmo compose usado no desenvolvimento: a aplicação-sonda atende por
+      # PHP-FPM, FrankenPHP, RoadRunner e Swoole. Postgres, Redis e MinIO sobem
+      # junto, para que qualquer teste compartilhado pelo runtime use serviços
+      # reais — inclusive o contract test S3, não um mock em memória.
+      - name: Sobe runtimes e infraestrutura real
+        run: docker compose up -d --build php postgres mysql redis minio fpm nginx frankenphp roadrunner swoole
+
+      - name: Instala dependências
+        run: docker compose exec -T php composer install --prefer-dist --no-interaction --no-progress
+
+      # Workers carregam o autoloader no boot: sem reiniciar depois do install
+      # estariam servindo com o vendor que existia antes dele.
+      - name: Reinicia os servidores e espera responderem
+        run: |
+          docker compose restart fpm nginx frankenphp roadrunner swoole
+          for url in http://localhost:8080/probe/echo/ping http://localhost:8081/probe/echo/ping http://localhost:8082/probe/echo/ping http://localhost:8083/probe/echo/ping; do
+            for attempt in $(seq 1 30); do
+              curl -sf "$url" >/dev/null && break
+              if [ "$attempt" -eq 30 ]; then echo "Runtime não respondeu: $url"; exit 1; fi
+              sleep 2
+            done
+          done
+
+      - name: Suíte em PHP-FPM e todos os runtimes
+        run: docker compose exec -T php vendor/bin/phpunit --group runtime
+
+      - name: Logs dos servidores
+        if: failure()
+        run: docker compose logs fpm nginx frankenphp roadrunner swoole postgres mysql redis minio

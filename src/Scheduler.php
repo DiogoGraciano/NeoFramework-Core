@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core;
 
@@ -20,7 +21,7 @@ class Scheduler
         if (self::$instance === null) {
             self::$instance = new GOScheduler();
         }
-        
+
         return self::$instance;
     }
 

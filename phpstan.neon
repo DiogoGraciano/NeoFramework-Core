@@ -1,0 +1,33 @@
+includes:
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
+        # O adapter do RoadRunner mora no repositório desde que o CI passou a
+        # exercitá-lo: fora dele, o namespace não existia no checkout e a suíte
+        # abortava inteira ao carregar o teste do adapter.
+        - packages/roadrunner/src
+        # Os adapters opcionais entram na análise pelo mesmo motivo: fora dela,
+        # um erro de tipo num pacote publicado só apareceria em produção.
+        - packages/opentelemetry/src
+        - packages/image/src
+        - packages/br-support/src
+    excludePaths:
+        analyseAndScan:
+            - src/Commands
+    treatPhpDocTypesAsCertain: false
+    ignoreErrors:
+        # O trait é usado por `tests/NeoFrameworkDatabaseTransactionsTest.php`, e
+        # `tests` não está em `paths`. Não é código morto: é um helper que só
+        # tem chamador do lado que não é analisado.
+        -
+            identifier: trait.unused
+            path: src/Testing/DatabaseTransactions.php
+
+services:
+    -
+        class: NeoFramework\Core\StaticAnalysis\NoEnvOutsideConfigRule
+        tags:
+            - phpstan.rules.rule

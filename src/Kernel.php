@@ -1,24 +1,30 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core;
 
 use Dotenv\Dotenv;
-use Respect\Validation\Factory;
+use NeoFramework\Core\Config\AppConfig;
+use NeoFramework\Core\Config\ConfigValidator;
+use NeoFramework\Core\Http\ResponseEmitter;
 
 class Kernel
 {
-    public static function loadEnv(){
-        $dotenv = Dotenv::createImmutable(Functions::getRoot());
-        $dotenv->load();
+    public static function loadEnv(): void
+    {
+        $dotenv = Dotenv::createImmutable(\NeoFramework\Core\Support\ProjectRoot::path());
+        $dotenv->safeLoad();
+        Config::reset();
     }
 
-    public static function init()
+    public static function init(): void
     {
         error_reporting(E_ALL);
 
         self::loadEnv();
+        ConfigValidator::validate(Config::repository()->all());
 
-        $isProduction = env("ENVIRONMENT") === "prod";
+        $isProduction = AppConfig::from(Config::repository())->isProduction();
 
         // Em produção os detalhes vão para o log, nunca para a resposta.
         ini_set('display_errors', $isProduction ? '0' : '1');
@@ -29,22 +35,15 @@ class Kernel
         } else {
             $whoops->pushHandler(function ($e) {
                 Logger::error('Error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
-                $response = new Response;
-                $response->setCode(self::resolveHttpStatus($e));
-                $response->send();
+                (new ResponseEmitter())->emit(new Response(self::resolveHttpStatus($e)));
             });
         }
         $whoops->register();
 
         Session::start();
 
-        Factory::setDefaultInstance(
-            (new Factory())
-                ->withRuleNamespace('NeoFramework\Core\Validator\Rules')
-                ->withExceptionNamespace('NeoFramework\Core\Validator\Exceptions')
-        );
-
-        (new Router)->load();
+        $response = (new Application())->boot()->handle(Request::fromGlobals());
+        (new ResponseEmitter())->emit($response);
     }
 
     /**

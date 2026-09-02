@@ -1,7 +1,18 @@
 #!/usr/bin/env php
 <?php
+declare(strict_types=1);
 
-if (\file_exists(__DIR__ . '/../../../autoload.php')) {
+// O proxy que o Composer gera em vendor/bin declara este global apontando para o
+// autoloader da APLICAÇÃO. Ele precisa vir primeiro: quando o framework é instalado
+// por path repository com "symlink": true, __DIR__ resolve para o caminho real do
+// repositório da lib, e os caminhos relativos abaixo encontram o autoloader do
+// próprio framework — que conhece NeoFramework\Core\ mas não App\.
+//
+// O sintoma era silencioso e caro: a descoberta de controllers não achava classe
+// nenhuma, `route:cache` gravava um mapa vazio e a aplicação respondia 404 em tudo.
+if (isset($GLOBALS['_composer_autoload_path']) && \file_exists($GLOBALS['_composer_autoload_path'])) {
+    require $GLOBALS['_composer_autoload_path'];
+} elseif (\file_exists(__DIR__ . '/../../../autoload.php')) {
     require __DIR__ . '/../../../autoload.php';
 } elseif (\file_exists(__DIR__ . '/../../autoload.php')) {
     require __DIR__ . '/../../autoload.php';
@@ -9,18 +20,55 @@ if (\file_exists(__DIR__ . '/../../../autoload.php')) {
     require __DIR__ . '/../vendor/autoload.php';
 }
 
+use NeoFramework\Core\Commands\About;
+use NeoFramework\Core\Commands\Auth\Token as AuthToken;
 use NeoFramework\Core\Commands\Build;
+use NeoFramework\Core\Commands\Config\Cache as ConfigCache;
+use NeoFramework\Core\Commands\Config\Clear as ConfigClear;
+use NeoFramework\Core\Commands\Config\ListConfig;
+use NeoFramework\Core\Commands\Config\Validate as ConfigValidate;
+use NeoFramework\Core\Commands\Db\Check as DbCheck;
+use NeoFramework\Core\Commands\Db\Pull as DbPull;
+use NeoFramework\Core\Commands\Db\Push as DbPush;
+use NeoFramework\Core\Commands\Db\Reset as DbReset;
+use NeoFramework\Core\Commands\Db\Seed as DbSeed;
+use NeoFramework\Core\Commands\Doctor;
+use NeoFramework\Core\Commands\Dto\Cache as DtoCacheCommand;
+use NeoFramework\Core\Commands\Dto\Clear as DtoClearCommand;
+use NeoFramework\Core\Commands\Event\Cache as EventCache;
+use NeoFramework\Core\Commands\Event\Clear as EventClear;
+use NeoFramework\Core\Commands\Event\ListEvents as EventList;
+use NeoFramework\Core\Commands\Make;
 use NeoFramework\Core\Commands\Migrate;
+use NeoFramework\Core\Commands\Migration\Generate as MigrationGenerate;
+use NeoFramework\Core\Commands\Migration\Status as MigrationStatus;
+use NeoFramework\Core\Commands\Migration\Up as MigrationUp;
+use NeoFramework\Core\Commands\Model\Phpdoc as ModelPhpdoc;
+use NeoFramework\Core\Commands\Model\Types as ModelTypes;
+use NeoFramework\Core\Commands\Policy\ListPolicies;
 use NeoFramework\Core\Commands\Queue\Clear;
 use NeoFramework\Core\Commands\Queue\Show;
 use NeoFramework\Core\Commands\Queue\Work;
 use NeoFramework\Core\Commands\Route\Cache as RouteCacheCommand;
 use NeoFramework\Core\Commands\Route\Clear as RouteClear;
+use NeoFramework\Core\Commands\Route\ListRoutes as RouteList;
 use NeoFramework\Core\Commands\Schedule\Run;
 use NeoFramework\Core\Commands\Schedule\Work as ScheduleWork;
+use NeoFramework\Core\Commands\StubsPublish;
 use NeoFramework\Core\Commands\Test;
-use NeoFramework\Core\Functions;
+use NeoFramework\Core\Commands\Vite\Dev as ViteDev;
 use NeoFramework\Core\Kernel;
+use NeoFramework\Core\Support\ProjectRoot;
+
+// Quando o binário vem de vendor/bin, o autoloader da aplicação já é conhecido.
+// Fixar sua raiz aqui torna a CLI independente do diretório de trabalho e do
+// symlink usado por path repositories.
+if (isset($GLOBALS['_composer_autoload_path']) && is_string($GLOBALS['_composer_autoload_path'])) {
+    $root = dirname($GLOBALS['_composer_autoload_path'], 2);
+    if (is_file($root . DIRECTORY_SEPARATOR . 'composer.json')) {
+        ProjectRoot::set($root);
+    }
+}
 
 if (PHP_VERSION_ID < 80000) {
     echo "NeoFramework requires PHP8.0 or newer\n";
@@ -29,6 +77,18 @@ if (PHP_VERSION_ID < 80000) {
 }
 
 Kernel::loadEnv();
+
+// A CLI roda fora de qualquer requisição, e `Events::dispatch()` lê o dispatcher
+// do escopo corrente — sem este bloco, um evento despachado por `migration:up`
+// ou por um worker não chega a listener nenhum, e o silêncio é indistinguível
+// de "não aconteceu". O escopo dura o processo inteiro; o `JobScope` aninha o
+// dele por job e restaura este ao sair.
+$consoleScope = new \NeoFramework\Core\Http\RequestScope();
+$consoleScope->set(
+    \NeoFramework\Core\Events\Events::KEY,
+    \NeoFramework\Core\Events\DispatcherFactory::fromContainer(new \NeoFramework\Core\Container()),
+);
+\NeoFramework\Core\Http\RequestScopeContext::enter($consoleScope);
 
 $logo = "
 =============================================================================================
@@ -47,8 +107,33 @@ $app = new Ahc\Cli\Application(
     '1.0'
 );
 
+// `migration:*` mexe em arquivos do repositório; `db:*` mexe no banco vivo. A separação é o
+// ponto: no sistema antigo um comando só recriava o banco, convergia o schema, semeava dados
+// e reescrevia docblocks, sem que desse para pedir uma dessas coisas sem as outras.
+$app->add(new MigrationGenerate, 'mg');
+$app->add(new MigrationUp, 'mu');
+$app->add(new MigrationStatus, 'ms');
+$app->add(new DbPush, 'dp');
+$app->add(new DbPull, 'dl');
+$app->add(new DbCheck, 'dc');
+$app->add(new DbSeed, 'ds');
+$app->add(new DbReset, 'dr');
+$app->add(new ModelTypes, 'mt');
+$app->add(new AuthToken);
+$app->add(new ListPolicies);
+
+// Lápides: imprimem o mapa novo e saem com código 1, para um script que ainda as chame
+// PARAR em vez de seguir achando que fez o trabalho.
 $app->add(new Migrate, 'mig');
+$app->add(new ModelPhpdoc, 'mp');
+
 $app->add(new Build, 'bu');
+$app->add(new About);
+$app->add(new Doctor);
+$app->add(new StubsPublish);
+foreach (['controller', 'middleware', 'request', 'policy', 'job', 'command', 'test'] as $type) {
+    $app->add(new Make($type));
+}
 $app->add(new Work, 'qw');
 $app->add(new Show,"qs");
 $app->add(new Clear,"qc");
@@ -57,9 +142,20 @@ $app->add(new ScheduleWork,"sw");
 $app->add(new Test,"te");
 $app->add(new RouteCacheCommand,"rc");
 $app->add(new RouteClear,"rcl");
+$app->add(new RouteList,"rl");
+$app->add(new EventCache,"ec");
+$app->add(new EventClear,"ecl");
+$app->add(new DtoCacheCommand,"dtc");
+$app->add(new DtoClearCommand,"dtcl");
+$app->add(new EventList,"el");
+$app->add(new ViteDev,"vd");
+$app->add(new ConfigCache);
+$app->add(new ConfigClear);
+$app->add(new ConfigValidate);
+$app->add(new ListConfig);
 
 $class = [];
-$folder = Functions::getRoot() . "App/Commands";
+$folder = ProjectRoot::path() . "App/Commands";
 if (is_dir($folder)) {
     $files = scandir($folder);
     foreach ($files as $file) {
@@ -70,11 +166,10 @@ if (is_dir($folder)) {
     if (!empty($class)) {
         foreach ($class as $command) {
             if (is_subclass_of($command,"Ahc\Cli\Input\Command")) {
-                $app->add(new $command,defined($command."::ALIAS")?$command::ALIAS:"");
+                $app->add(new $command,defined($command . "::ALIAS") ? $command::ALIAS : "");
             }
         }
     }
 }
-
 
 $app->logo($logo)->handle($_SERVER['argv']);

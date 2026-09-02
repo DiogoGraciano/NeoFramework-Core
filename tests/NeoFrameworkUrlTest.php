@@ -1,8 +1,11 @@
 <?php
+declare(strict_types=1);
 
 namespace Tests;
 
 use InvalidArgumentException;
+use NeoFramework\Core\Config;
+use NeoFramework\Core\Config\ConfigRepository;
 use NeoFramework\Core\Response;
 use NeoFramework\Core\Url;
 use PHPUnit\Framework\TestCase;
@@ -22,21 +25,20 @@ class NeoFrameworkUrlTest extends TestCase
         parent::setUp();
         $this->serverBackup = $_SERVER;
 
-        unset($_ENV['APP_URL'], $_ENV['TRUSTED_HOSTS'], $_ENV['TRUSTED_PROXIES']);
-        unset($_SERVER['APP_URL'], $_SERVER['TRUSTED_HOSTS'], $_SERVER['TRUSTED_PROXIES']);
+        $this->useConfig();
     }
 
     protected function tearDown(): void
     {
         $_SERVER = $this->serverBackup;
-        unset($_ENV['APP_URL'], $_ENV['TRUSTED_HOSTS'], $_ENV['TRUSTED_PROXIES']);
+        Config::reset();
 
         parent::tearDown();
     }
 
     public function testAppUrlTemPrecedenciaSobreOHostDaRequisicao()
     {
-        $_ENV['APP_URL'] = 'https://app.exemplo.com';
+        $this->useConfig(url: 'https://app.exemplo.com');
         $_SERVER['HTTP_HOST'] = 'atacante.com';
 
         $this->assertEquals('https://app.exemplo.com/', Url::getUrlBase());
@@ -44,7 +46,7 @@ class NeoFrameworkUrlTest extends TestCase
 
     public function testHostForaDaAllowlistNaoEhUsado()
     {
-        $_ENV['TRUSTED_HOSTS'] = 'app.exemplo.com';
+        $this->useConfig(hosts: ['app.exemplo.com']);
         $_SERVER['HTTP_HOST'] = 'atacante.com';
         $_SERVER['SERVER_NAME'] = 'app.exemplo.com';
 
@@ -53,7 +55,7 @@ class NeoFrameworkUrlTest extends TestCase
 
     public function testHostNaAllowlistEhAceito()
     {
-        $_ENV['TRUSTED_HOSTS'] = 'app.exemplo.com,admin.exemplo.com';
+        $this->useConfig(hosts: ['app.exemplo.com', 'admin.exemplo.com']);
         $_SERVER['HTTP_HOST'] = 'admin.exemplo.com';
 
         $this->assertEquals('http://admin.exemplo.com/', Url::getUrlBase());
@@ -78,7 +80,7 @@ class NeoFrameworkUrlTest extends TestCase
 
     public function testProxyConfiavelDefineHttps()
     {
-        $_ENV['TRUSTED_PROXIES'] = '10.0.0.1';
+        $this->useConfig(proxies: ['10.0.0.1']);
         $_SERVER['REMOTE_ADDR'] = '10.0.0.1';
         $_SERVER['HTTP_X_FORWARDED_PROTO'] = 'https';
         unset($_SERVER['HTTPS'], $_SERVER['SERVER_PORT']);
@@ -113,5 +115,11 @@ class NeoFrameworkUrlTest extends TestCase
         $response = (new Response())->goToSite('https://parceiro.com/callback');
 
         $this->assertEquals(['https://parceiro.com/callback'], $response->getHeader('Location'));
+    }
+
+    /** @param list<string> $hosts @param list<string> $proxies */
+    private function useConfig(string $url = '', array $hosts = [], array $proxies = []): void
+    {
+        Config::setRepository(new ConfigRepository(sys_get_temp_dir(), ['app' => ['environment' => 'test', 'url' => $url], 'http' => ['trusted_hosts' => $hosts, 'trusted_proxies' => $proxies]], false));
     }
 }

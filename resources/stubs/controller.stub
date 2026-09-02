@@ -1,0 +1,17 @@
+<?php
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use NeoFramework\Core\Abstract\Controller;
+use NeoFramework\Core\Attributes\Route;
+use NeoFramework\Core\Response;
+
+final class {{ class }} extends Controller
+{
+    #[Route('/', ['GET'])]
+    public function index(): Response
+    {
+        return $this->json([]);
+    }
+}

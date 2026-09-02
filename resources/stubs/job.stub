@@ -1,0 +1,11 @@
+<?php
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use NeoFramework\Core\Abstract\Job;
+
+final class {{ class }} extends Job
+{
+    public function handle(): void {}
+}

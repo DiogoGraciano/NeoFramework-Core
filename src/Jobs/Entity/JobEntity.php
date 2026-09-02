@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace NeoFramework\Core\Jobs\Entity;
 
 use DateTime;
@@ -102,7 +104,7 @@ class JobEntity implements JsonSerializable
         if (!$this->schedule) {
             return true;
         }
-        
+
         return $this->schedule <= new DateTime();
     }
 
@@ -143,27 +145,27 @@ class JobEntity implements JsonSerializable
         }
 
         $job = new self($data['class'], $data['args'] ?? [], $schedule);
-        
+
         if (isset($data['id'])) {
             $job->setId($data['id']);
         }
-        
+
         if (isset($data['attempts'])) {
             $job->setAttempts($data['attempts']);
         }
-        
+
         if (isset($data['status'])) {
             $job->setStatus($data['status']);
         }
-        
+
         if (isset($data['result'])) {
             $job->setResult($data['result']);
         }
-        
+
         if (isset($data['error'])) {
             $job->setError($data['error']);
         }
-        
+
         return $job;
     }
 

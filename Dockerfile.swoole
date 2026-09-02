@@ -1,0 +1,8 @@
+FROM neoframework-core-php:latest
+
+# Swoole é propositalmente uma imagem separada: o Core não exige a extensão e
+# aplicações FPM/FrankenPHP/RoadRunner não devem carregar um runtime extra.
+RUN pecl install swoole \
+    && docker-php-ext-enable swoole
+
+CMD ["php", "/var/www/html/tests/runtime/worker-swoole.php"]

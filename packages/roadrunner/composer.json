@@ -1,0 +1,22 @@
+{
+  "name": "diogodg/neoframework-roadrunner",
+  "description": "RoadRunner worker adapter for NeoFramework Core",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.4",
+    "diogodg/neoframework": "^2.0",
+    "spiral/roadrunner-http": "^4.0",
+    "nyholm/psr7": "^1.8"
+  },
+  "autoload": {
+    "psr-4": {
+      "NeoFramework\\RoadRunner\\": "src/"
+    }
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "2.0.x-dev"
+    }
+  }
+}

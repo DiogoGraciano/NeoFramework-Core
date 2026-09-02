@@ -1,9 +1,10 @@
 <?php
+declare(strict_types=1);
 
 namespace Tests;
 
 use NeoFramework\Core\Enums\FileStorageType;
-use NeoFramework\Core\FileStorage;
+use NeoFramework\Core\Storage\UploadValidator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -16,12 +17,12 @@ use PHPUnit\Framework\TestCase;
  */
 class NeoFrameworkFileStorageTest extends TestCase
 {
-    private FileStorage $storage;
+    private UploadValidator $validator;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->storage = new FileStorage();
+        $this->validator = new UploadValidator();
     }
 
     public static function extensoesBloqueadas(): array
@@ -41,29 +42,29 @@ class NeoFrameworkFileStorageTest extends TestCase
     public function testExtensaoExecutavelEhRecusadaMesmoComTipoAny(string $fileName)
     {
         // ANY é o tipo mais permissivo e ainda assim não pode aceitar executável.
-        $this->assertFalse($this->storage->validExtension($fileName, FileStorageType::ANY));
+        $this->assertNotNull($this->validator->extensionError($fileName, FileStorageType::ANY));
     }
 
     public function testSvgNaoEhAceitoComoImagem()
     {
-        $this->assertFalse($this->storage->validExtension('logo.svg', FileStorageType::IMAGE));
+        $this->assertNotNull($this->validator->extensionError('logo.svg', FileStorageType::IMAGE));
     }
 
     public function testImagemComExtensaoValidaEhAceita()
     {
-        $this->assertTrue($this->storage->validExtension('foto.jpg', FileStorageType::IMAGE));
-        $this->assertTrue($this->storage->validExtension('foto.PNG', FileStorageType::IMAGE));
+        $this->assertNull($this->validator->extensionError('foto.jpg', FileStorageType::IMAGE));
+        $this->assertNull($this->validator->extensionError('foto.PNG', FileStorageType::IMAGE));
     }
 
     public function testArquivoSemExtensaoEhRecusado()
     {
-        $this->assertFalse($this->storage->validExtension('arquivo', FileStorageType::ANY));
+        $this->assertNotNull($this->validator->extensionError('arquivo', FileStorageType::ANY));
     }
 
     public function testDocumentoNaoAceitaExtensaoDeImagem()
     {
-        $this->assertFalse($this->storage->validExtension('foto.jpg', FileStorageType::DOCUMENT));
-        $this->assertTrue($this->storage->validExtension('contrato.pdf', FileStorageType::DOCUMENT));
+        $this->assertNotNull($this->validator->extensionError('foto.jpg', FileStorageType::DOCUMENT));
+        $this->assertNull($this->validator->extensionError('contrato.pdf', FileStorageType::DOCUMENT));
     }
 
     public function testMimeDeSvgEhRecusadoComoImagem()
@@ -72,7 +73,7 @@ class NeoFrameworkFileStorageTest extends TestCase
         file_put_contents($path, '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
 
         try {
-            $this->assertFalse($this->storage->validType($path, FileStorageType::IMAGE));
+            $this->assertNotNull($this->validator->mimeError($path, FileStorageType::IMAGE));
         } finally {
             unlink($path);
         }
@@ -84,7 +85,7 @@ class NeoFrameworkFileStorageTest extends TestCase
         // try/catch anteriores não capturavam nada.
         $inexistente = sys_get_temp_dir() . '/nao-existe-' . bin2hex(random_bytes(4));
 
-        $this->assertFalse($this->storage->validType($inexistente, FileStorageType::IMAGE));
-        $this->assertFalse($this->storage->validSize($inexistente, 1000));
+        $this->assertNotNull($this->validator->mimeError($inexistente, FileStorageType::IMAGE));
+        $this->assertNotNull($this->validator->sizeError($inexistente, 1000));
     }
 }

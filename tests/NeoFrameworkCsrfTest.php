@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace Tests;
 
@@ -84,7 +85,7 @@ class NeoFrameworkCsrfTest extends TestCase
         // o PHP nunca cria: cabeçalhos chegam com o prefixo HTTP_.
         $_SERVER['HTTP_X_CSRF_TOKEN'] = 'token-do-cabecalho';
 
-        $request = new Request();
+        $request = Request::fromGlobals();
 
         $this->assertEquals('token-do-cabecalho', $request->getCsrfToken());
     }
@@ -94,7 +95,7 @@ class NeoFrameworkCsrfTest extends TestCase
         $_POST['CSRF_TOKEN'] = 'token-do-corpo';
         $_SERVER['HTTP_X_CSRF_TOKEN'] = 'token-do-cabecalho';
 
-        $request = new Request();
+        $request = Request::fromGlobals();
 
         $this->assertEquals('token-do-corpo', $request->getCsrfToken());
     }
@@ -108,14 +109,14 @@ class NeoFrameworkCsrfTest extends TestCase
     {
         // O atributo desligava o CSRF da rota inteira quando ela também aceitava
         // GET, o que deixava o POST desprotegido.
-        $route = new \NeoFramework\Core\Attributes\Route('salvar', ['GET', 'POST']);
+        $route = new \NeoFramework\Core\Attributes\Route('/salvar', ['GET', 'POST']);
 
         $this->assertTrue($route->getValidCsrf());
     }
 
     public function testRotaPodeOptarPorNaoValidar()
     {
-        $route = new \NeoFramework\Core\Attributes\Route('webhook', ['POST'], false);
+        $route = new \NeoFramework\Core\Attributes\Route('/webhook', ['POST'], false);
 
         $this->assertFalse($route->getValidCsrf());
     }

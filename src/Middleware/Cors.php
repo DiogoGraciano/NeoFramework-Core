@@ -1,14 +1,17 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core\Middleware;
 
-use NeoFramework\Core\Abstract\Controller;
-use NeoFramework\Core\Exceptions\HttpResponseException;
-use NeoFramework\Core\Interfaces\Middleware;
+use NeoFramework\Core\Config;
+use NeoFramework\Core\Config\CorsConfig;
 use NeoFramework\Core\Response;
-use NeoFramework\Core\Request;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
-class Cors implements Middleware
+class Cors implements MiddlewareInterface
 {
     private array $config;
 
@@ -34,55 +37,41 @@ class Cors implements Middleware
         }
     }
 
-    public function before(Controller $controller): Controller
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $request = $controller->getRequest();
-        $response = $controller->getResponse();
-
-        $this->addCorsHeaders($response, $request);
-
-        // O preflight se encerra aqui: não há controller a executar.
-        if ($request->server('REQUEST_METHOD') === 'OPTIONS') {
-            throw new HttpResponseException($response->setCode(204), "CORS preflight");
-        }
-
-        return $controller;
+        $response = strtoupper($request->getMethod()) === 'OPTIONS' ? new Response(204) : $handler->handle($request);
+        return $this->addCorsHeaders($response, $request);
     }
 
-    public function after(Response $response): Response
+    private function addCorsHeaders(ResponseInterface $response, ServerRequestInterface $request): ResponseInterface
     {
-        return $response;
-    }
-
-    private function addCorsHeaders(Response $response, Request $request): void
-    {
-        $origin = $request->getHeader('Origin');
+        $origin = $request->getHeaderLine('Origin') ?: null;
 
         // Sem Origin não é uma requisição cross-origin; não há o que liberar.
         if ($origin && $this->isOriginAllowed($origin)) {
             if (in_array('*', $this->config['allowed_origins'], true)) {
-                $response->addHeader('Access-Control-Allow-Origin', '*');
+                $response = $response->withHeader('Access-Control-Allow-Origin', '*');
             } else {
                 // Só chega aqui quando a origin consta da allowlist.
-                $response->addHeader('Access-Control-Allow-Origin', $origin);
+                $response = $response->withHeader('Access-Control-Allow-Origin', $origin);
             }
         }
 
-        $response->addHeader('Access-Control-Allow-Methods', implode(', ', $this->config['allowed_methods']));
+        $response = $response->withHeader('Access-Control-Allow-Methods', implode(', ', $this->config['allowed_methods']));
 
-        $response->addHeader('Access-Control-Allow-Headers', implode(', ', $this->config['allowed_headers']));
+        $response = $response->withHeader('Access-Control-Allow-Headers', implode(', ', $this->config['allowed_headers']));
 
         if (!empty($this->config['exposed_headers'])) {
-            $response->addHeader('Access-Control-Expose-Headers', implode(', ', $this->config['exposed_headers']));
+            $response = $response->withHeader('Access-Control-Expose-Headers', implode(', ', $this->config['exposed_headers']));
         }
 
-        $response->addHeader('Access-Control-Max-Age', (string) $this->config['max_age']);
+        $response = $response->withHeader('Access-Control-Max-Age', (string) $this->config['max_age']);
 
         if ($this->config['allow_credentials']) {
-            $response->addHeader('Access-Control-Allow-Credentials', 'true');
+            $response = $response->withHeader('Access-Control-Allow-Credentials', 'true');
         }
 
-        $response->addHeader('Vary', 'Origin');
+        return $response->withAddedHeader('Vary', 'Origin');
     }
 
     private function isOriginAllowed(?string $origin): bool
@@ -98,38 +87,14 @@ class Cors implements Middleware
         return in_array($origin, $this->config['allowed_origins'], true);
     }
 
-    /**
-     * Create CORS middleware with environment-based configuration
-     */
+    /** @deprecated Configuration is loaded during bootstrap; use fromConfig(). */
     public static function fromEnv(): self
     {
-        $config = [];
-
-        $corsOrigins = env('CORS_ORIGINS','*');
-        if ($corsOrigins !== '*') {
-            $config['allowed_origins'] = array_map('trim', explode(',', $corsOrigins));
-        }
-
-        $corsMethods = env('CORS_METHODS');   
-        if ($corsMethods) {
-            $config['allowed_methods'] = array_map('trim', explode(',', $corsMethods));
-        }
-
-        $corsHeaders = env('CORS_HEADERS');
-        if ($corsHeaders) {
-            $config['allowed_headers'] = array_map('trim', explode(',', $corsHeaders));
-        }
-
-        $corsMaxAge = env('CORS_MAX_AGE');
-        if ($corsMaxAge) {
-            $config['max_age'] = (int) $corsMaxAge;
-        }
-
-        $corsCredentials = env('CORS_CREDENTIALS');
-        if ($corsCredentials !== null) {
-            $config['allow_credentials'] = filter_var($corsCredentials, FILTER_VALIDATE_BOOLEAN);
-        }
-
-        return new self($config);
+        return self::fromConfig(CorsConfig::from(Config::repository()));
     }
-} 
+
+    public static function fromConfig(CorsConfig $config): self
+    {
+        return new self($config->middleware());
+    }
+}

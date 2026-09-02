@@ -1,0 +1,31 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property NeoFramework\\Core\\Template\:\:\$neof_csrf_token\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Abstract/Layout.php
+
+		-
+			message: '#^Access to an undefined property NeoFramework\\Core\\Template\:\:\$neof_vite\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Abstract/Layout.php
+
+		-
+			message: '#^Class NeoFramework\\Core\\Template referenced with incorrect case\: NeoFramework\\Core\\template\.$#'
+			identifier: class.nameCase
+			count: 1
+			path: src/Abstract/Layout.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Session.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 1
+			path: src/Session.php

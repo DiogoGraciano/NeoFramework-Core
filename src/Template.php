@@ -1,6 +1,14 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core;
+
+use NeoFramework\Core\Template\CompiledTemplateCache;
+use NeoFramework\Core\Template\TemplateCompiler;
+use NeoFramework\Core\Template\TemplateRenderer;
+use NeoFramework\Core\Template\TemplateSyntax;
+use NeoFramework\Core\Template\TokenKind;
+use NeoFramework\Core\Template\TokenResolverInterface;
 
 /**
  * Template engine.
@@ -23,44 +31,10 @@ namespace NeoFramework\Core;
  *
  * @author Diogo Graciano
  */
-final class Template
+final class Template implements TokenResolverInterface
 {
-    /** Tipos de placeholder resolvidos em tempo de render. */
-    private const S_VAR = 0;
-    private const S_BLOCK = 1;
-    private const S_PROP = 2;
-    private const S_MOD = 3;
-    private const S_FILE = 4;
-
-    /**
-     * Prefixo do placeholder interno que substitui um bloco no corpo do pai.
-     * Usa um prefixo improvavel em vez do sufixo "_value" da versao anterior, que
-     * podia colidir com uma variavel real chamada {ALGO_value}.
-     */
-    private const MARKER = '__neoblk_';
-
-    /** Chave interna dos corpos FINALLY. O \0 garante que nao colide com nome de bloco. */
-    private const FINALLY_KEY = "\0finally\0";
-
-    /** Incremente ao mudar o formato do cache compilado. */
-    private const CACHE_VERSION = 2;
-
-    /**
-     * {VAR}, {VAR->prop->prop}, {VAR|mod!arg}
-     * Classe de caracteres direta: a versao anterior usava ([[:alnum:]]|_)+ , uma
-     * alternancia dentro de grupo capturante quantificado, e ((\|.*?)*)? , um
-     * quantificador aninhado com risco de backtracking catastrofico.
-     */
-    private const RE_TOKEN = '/\{([A-Za-z0-9_]+)((?:->[A-Za-z0-9_]+)*)(\|[^}]*)?\}/';
-
-    /** Marcadores de bloco. Uma passada sobre o documento inteiro. */
-    private const RE_BLOCK = '/<!--\s*(BEGIN|END)\s+([A-Za-z0-9_]+)\s*-->/';
-
     /** Namespace onde os modifiers sao resolvidos. */
     private const MODIFIER_NAMESPACE = 'app\helpers\Functions::';
-
-    /** Separador de argumentos de modifier: {var|funcao!arg1!arg2} */
-    private const MODIFIER_ARG_SEPARATOR = '!';
 
     // ----------------------------------------------------- estado compilado
 
@@ -101,7 +75,11 @@ final class Template
 
     private bool $accurate;
 
-    private ?string $cacheDir;
+    private CompiledTemplateCache $cache;
+
+    private TemplateCompiler $compiler;
+
+    private TemplateRenderer $renderer;
 
     /**
      * Cria um novo template usando $filename como arquivo principal.
@@ -120,13 +98,9 @@ final class Template
     {
         $this->accurate = $accurate;
 
-        if ($cacheDir === null) {
-            $this->cacheDir = self::defaultCacheDir();
-        } else {
-            // Trim antes de comparar: um caminho em branco desliga o cache em vez de
-            // virar '/<hash>.php' e escrever na raiz do filesystem.
-            $this->cacheDir = \trim($cacheDir) === '' ? null : \rtrim($cacheDir, '/');
-        }
+        $this->cache = CompiledTemplateCache::fromDirectory($cacheDir);
+        $this->compiler = new TemplateCompiler($accurate);
+        $this->renderer = new TemplateRenderer();
 
         $this->load('.', $filename);
     }
@@ -150,8 +124,8 @@ final class Template
         foreach ($this->subFiles as $sub => $_) {
             $placeholder = '{' . $sub . '}';
             foreach ($this->keys as $name => $keys) {
-                if (isset($keys[$placeholder]) && $keys[$placeholder][0] === self::S_VAR) {
-                    $this->keys[$name][$placeholder] = [self::S_FILE, $sub];
+                if (isset($keys[$placeholder]) && $keys[$placeholder][0] === TokenKind::VARIABLE) {
+                    $this->keys[$name][$placeholder] = [TokenKind::FILE, $sub];
                 }
             }
         }
@@ -241,7 +215,7 @@ final class Template
         if (isset($this->children[$block])) {
             foreach ($this->children[$block] as $child) {
                 if (isset($this->hasFinally[$child]) && !isset($this->parsed[$child])) {
-                    $this->blockValues[$child] = $this->resolve(self::FINALLY_KEY . $child);
+                    $this->blockValues[$child] = $this->resolve(TemplateSyntax::FINALLY_KEY . $child);
                     $this->parsed[$block] = true;
                 }
             }
@@ -285,7 +259,7 @@ final class Template
         // Renderiza os FINALLY dos blocos que nunca foram usados.
         foreach ($this->hasFinally as $block => $_) {
             if (!isset($this->parsed[$block])) {
-                $this->blockValues[$block] = $this->resolve(self::FINALLY_KEY . $block);
+                $this->blockValues[$block] = $this->resolve(TemplateSyntax::FINALLY_KEY . $block);
             }
         }
 
@@ -312,34 +286,19 @@ final class Template
      */
     private function resolve(string $name): string
     {
-        $keys = $this->keys[$name];
+        return $this->renderer->render($this->body[$name], $this->keys[$name], $this);
+    }
 
-        if ($keys === []) {
-            return $this->body[$name];
-        }
-
-        $map = [];
-        foreach ($keys as $placeholder => $key) {
-            switch ($key[0]) {
-                case self::S_VAR:
-                    $map[$placeholder] = $this->values[$key[1]] ?? '';
-                    break;
-                case self::S_BLOCK:
-                    $map[$placeholder] = $this->blockValues[$key[1]] ?? '';
-                    break;
-                case self::S_FILE:
-                    $map[$placeholder] = $this->resolve($key[1]);
-                    break;
-                case self::S_PROP:
-                    $map[$placeholder] = $this->property($key[1], $key[2]);
-                    break;
-                default:
-                    $map[$placeholder] = $this->modify($key);
-                    break;
-            }
-        }
-
-        return \strtr($this->body[$name], $map);
+    /** @param array<mixed> $token */
+    public function resolveToken(array $token): string
+    {
+        return match ($token[0]) {
+            TokenKind::VARIABLE => $this->values[$token[1]] ?? '',
+            TokenKind::BLOCK => $this->blockValues[$token[1]] ?? '',
+            TokenKind::FILE => $this->resolve($token[1]),
+            TokenKind::PROPERTY => $this->property($token[1], $token[2]),
+            default => $this->modify($token),
+        };
     }
 
     /**
@@ -434,22 +393,17 @@ final class Template
             return;
         }
 
-        $cacheFile = $this->cacheFile($filename);
-
-        if ($cacheFile !== null && \is_file($cacheFile)) {
-            /** @var array{body:array,keys:array,children:array,finally:array,vars:array,blocks:array} $cached */
-            $cached = require $cacheFile;
+        $cached = $this->cache->get($filename, $this->accurate);
+        if ($cached !== null) {
             $this->merge($varname, $cached);
 
             return;
         }
 
-        $compiled = $this->compile($filename);
+        $compiled = $this->compiler->compile($filename);
         $this->merge($varname, $compiled);
 
-        if ($cacheFile !== null) {
-            self::writeCache($cacheFile, $compiled);
-        }
+        $this->cache->put($filename, $this->accurate, $compiled);
     }
 
     /**
@@ -500,191 +454,6 @@ final class Template
         }
     }
 
-    /**
-     * Compila um arquivo: extrai blocos e placeholders.
-     *
-     * @return array{body:array,keys:array,children:array,finally:array,vars:array,blocks:array}
-     */
-    private function compile(string $filename): array
-    {
-        $source = \preg_replace('/<!---.*?--->/s', '', (string) \file_get_contents($filename));
-
-        if ($source === null || $source === '') {
-            throw new \InvalidArgumentException("file $filename is empty");
-        }
-
-        $vars = [];
-        if (\preg_match_all(self::RE_TOKEN, $source, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $match) {
-                $vars[$match[1]] = true;
-            }
-        }
-
-        // Monta a arvore de blocos em UMA passada de regex sobre o documento.
-        // A versao anterior quebrava o arquivo em linhas e executava duas regex por
-        // linha, sendo que o resultado da primeira era descartado.
-        $tree = [];
-        $stack = [];
-        if (\preg_match_all(self::RE_BLOCK, $source, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $match) {
-                if ($match[1] === 'BEGIN') {
-                    $tree[$stack === [] ? '.' : \end($stack)][] = $match[2];
-                    $stack[] = $match[2];
-                } else {
-                    \array_pop($stack);
-                }
-            }
-        }
-
-        $bodies = ['.' => $source];
-        $blocks = [];
-        $children = [];
-        $finally = [];
-
-        foreach ($tree as $parent => $list) {
-            foreach ($list as $block) {
-                if (isset($blocks[$block])) {
-                    throw new \UnexpectedValueException("duplicated block: $block");
-                }
-                $blocks[$block] = true;
-                $children[$parent][] = $block;
-
-                [$body, $finallyBody, $bodies[$parent]] = $this->splitBlock($bodies[$parent], $block);
-                $bodies[$block] = $body;
-
-                if ($finallyBody !== null) {
-                    $bodies[self::FINALLY_KEY . $block] = $finallyBody;
-                    $finally[$block] = true;
-                }
-            }
-        }
-
-        $keys = [];
-        foreach ($bodies as $name => $body) {
-            $keys[$name] = $this->extractKeys($body);
-        }
-
-        return [
-            'body' => $bodies,
-            'keys' => $keys,
-            'children' => $children,
-            'finally' => $finally,
-            'vars' => $vars,
-            'blocks' => $blocks,
-        ];
-    }
-
-    /**
-     * Remove um bloco do corpo do pai, devolvendo [corpo, corpoFinally|null, paiAtualizado].
-     *
-     * Usa as mesmas expressoes da versao anterior, para que o whitespace dos corpos
-     * extraidos seja identico byte a byte. Elas rodam apenas em tempo de compilacao
-     * e o resultado vai para o cache, entao o custo e amortizado.
-     *
-     * @return array{0:string,1:string|null,2:string}
-     *
-     * @throws \UnexpectedValueException se o bloco estiver mal formado
-     */
-    private function splitBlock(string $parent, string $block): array
-    {
-        if ($this->accurate) {
-            $parent = \str_replace("\r\n", "\n", $parent);
-            $regex = "/\t*<!--\s*BEGIN\s+$block\s+-->\n*(\s*.*?\n?)\t*<!--\s+END\s+$block\s*-->\n*((\s*.*?\n?)\t*<!--\s+FINALLY\s+$block\s*-->\n?)?/sm";
-        } else {
-            $regex = "/<!--\s*BEGIN\s+$block\s+-->\s*(\s*.*?\s*)<!--\s+END\s+$block\s*-->\s*((\s*.*?\s*)<!--\s+FINALLY\s+$block\s*-->)?\s*/sm";
-        }
-
-        if (1 !== \preg_match($regex, $parent, $match, PREG_OFFSET_CAPTURE)) {
-            throw new \UnexpectedValueException("mal-formed block $block");
-        }
-
-        // substr_replace com o offset da captura, em vez de uma segunda execucao de
-        // preg_replace sobre a mesma string.
-        $updated = \substr_replace(
-            $parent,
-            '{' . self::MARKER . $block . '}',
-            $match[0][1],
-            \strlen($match[0][0])
-        );
-
-        $finally = (isset($match[3]) && $match[3][1] !== -1) ? $match[3][0] : null;
-
-        return [$match[1][0], $finally, $updated];
-    }
-
-    /**
-     * Lista os placeholders distintos de um corpo.
-     *
-     * A chave do array e o proprio placeholder, portanto ocorrencias repetidas
-     * colapsam. Isso elimina por construcao o acumulo de modifiers duplicados que
-     * a versao anterior sofria: cada {var|mod} repetido gerava uma entrada nova e,
-     * consequentemente, uma substituicao redundante por linha renderizada.
-     *
-     * @return array<string,array>
-     */
-    private function extractKeys(string $body): array
-    {
-        $keys = [];
-
-        if (!\preg_match_all(self::RE_TOKEN, $body, $matches, PREG_SET_ORDER)) {
-            return $keys;
-        }
-
-        foreach ($matches as $match) {
-            $placeholder = $match[0];
-            if (isset($keys[$placeholder])) {
-                continue;
-            }
-
-            $name = $match[1];
-            $properties = $match[2] ?? '';
-            $modifiers = $match[3] ?? '';
-
-            $path = $properties === '' ? null : \array_slice(\explode('->', $properties), 1);
-
-            if ($modifiers === '') {
-                if ($path !== null) {
-                    $keys[$placeholder] = [self::S_PROP, $name, $path];
-                } elseif (\str_starts_with($name, self::MARKER)) {
-                    $keys[$placeholder] = [self::S_BLOCK, \substr($name, \strlen(self::MARKER))];
-                } else {
-                    // Sempre S_VAR aqui. A promocao para S_FILE acontece em addFile(),
-                    // e nao durante a compilacao, para que o resultado compilado seja
-                    // funcao apenas do conteudo do arquivo e possa ser cacheado com
-                    // seguranca independente da ordem das chamadas de addFile().
-                    $keys[$placeholder] = [self::S_VAR, $name];
-                }
-
-                continue;
-            }
-
-            // Cadeia de modifiers resolvida em tempo de compilacao; a versao anterior
-            // fazia explode() a cada render.
-            $chain = [];
-            foreach (\explode('|', \ltrim($modifiers, '|')) as $statement) {
-                if ($statement === '') {
-                    continue;
-                }
-                $parts = \explode(self::MODIFIER_ARG_SEPARATOR, $statement);
-                $function = \array_shift($parts);
-                // O nome vem do arquivo de template, entao so aceita identificador PHP
-                // simples. Somado ao namespace fixo, o alvo possivel fica restrito aos
-                // metodos estaticos de uma unica classe.
-                if (\preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $function) !== 1) {
-                    throw new \InvalidArgumentException("invalid modifier name: $function");
-                }
-                // array_slice, nao array_diff: a versao anterior comparava o nome cru
-                // da funcao com o nome ja prefixado pelo namespace, entao nunca removia
-                // nada e o proprio nome do modifier vazava como primeiro argumento.
-                $chain[] = [$function, $parts];
-            }
-
-            $keys[$placeholder] = [self::S_MOD, $name, $path, $chain];
-        }
-
-        return $keys;
-    }
-
     private static function isPHP(string $filename): bool
     {
         return \in_array(
@@ -694,61 +463,4 @@ final class Template
         );
     }
 
-    // -------------------------------------------------------------- CACHE
-
-    /**
-     * Diretorio de cache padrao. Devolve null quando o cache esta desligado ou o
-     * diretorio nao e utilizavel; nesse caso o template e compilado a cada request.
-     */
-    private static function defaultCacheDir(): ?string
-    {
-        if (\function_exists('env') && \strtolower(env('TEMPLATE_CACHE', 'true')) === 'false') {
-            return null;
-        }
-
-        $dir = Functions::getRoot() . 'Cache/templates';
-
-        if (!\is_dir($dir) && !@\mkdir($dir, 0775, true) && !\is_dir($dir)) {
-            return null;
-        }
-
-        return \is_writable($dir) ? $dir : null;
-    }
-
-    /**
-     * Caminho do arquivo de cache compilado. A chave inclui o mtime do arquivo,
-     * portanto editar o template invalida o cache automaticamente.
-     */
-    private function cacheFile(string $filename): ?string
-    {
-        if ($this->cacheDir === null) {
-            return null;
-        }
-
-        $key = \md5(\implode('|', [
-            self::CACHE_VERSION,
-            \realpath($filename) ?: $filename,
-            (string) \filemtime($filename),
-            $this->accurate ? '1' : '0',
-        ]));
-
-        return $this->cacheDir . '/' . $key . '.php';
-    }
-
-    /**
-     * Grava o cache de forma atomica: escreve em um temporario e renomeia, para que
-     * dois processos concorrentes nunca leiam um arquivo pela metade.
-     */
-    private static function writeCache(string $cacheFile, array $compiled): void
-    {
-        $temp = $cacheFile . '.' . \getmypid() . '.tmp';
-
-        if (@\file_put_contents($temp, '<?php return ' . \var_export($compiled, true) . ';') === false) {
-            return;
-        }
-
-        if (!@\rename($temp, $cacheFile)) {
-            @\unlink($temp);
-        }
-    }
 }

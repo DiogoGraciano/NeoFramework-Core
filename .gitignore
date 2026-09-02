@@ -1,3 +1,14 @@
 /vendor/
 /Jobs_Test/
+/Cache/
 .phpunit.result.cache
+.phpunit.cache/
+.php-cs-fixer.cache
+/Logs/
+tests-junit.xml
+/tests/runtime/Cache/
+/tests/runtime/Logs/
+
+/build/
+/Logs/infection.txt
+/Logs/infection-summary.txt

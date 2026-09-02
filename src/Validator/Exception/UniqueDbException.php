@@ -1,6 +1,8 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core\Validator\Exception;
+
 use Respect\Validation\Exceptions\ValidationException;
 
 class UniqueDbException extends ValidationException

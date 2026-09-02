@@ -1,0 +1,19 @@
+{
+  "name": "diogodg/neoframework-br-support",
+  "description": "Brazilian document helpers for NeoFramework applications",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "NeoFramework\\BrSupport\\": "src/"
+    }
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "2.0.x-dev"
+    }
+  }
+}

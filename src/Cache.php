@@ -1,8 +1,12 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core;
 
 use Exception;
+use NeoFramework\Core\Config\CacheConfig;
+use Psr\Cache\CacheItemInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Cache\Adapter\FilesystemTagAwareAdapter;
 use Symfony\Component\Cache\Adapter\MemcachedAdapter;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
@@ -16,29 +20,23 @@ final class Cache {
     private static function load(): TagAwareCacheInterface
     {
         if (self::$instance === null) {
-            if (!env("CACHE_ADAPTER")) {
-                throw new Exception("CACHE_ADAPTER not found in the .env file, please configure the cache adapter");
-            }
-
-            // O "!" transformava o valor em bool, strtolower(false) devolvia ""
-            // e o switch caía sempre no default: redis e memcached nunca eram
-            // usados, por mais que estivessem configurados.
-            $adapterType = strtolower((string) env("CACHE_ADAPTER", "filesystem"));
+            $config = CacheConfig::from(Config::repository());
+            $adapterType = $config->adapter;
 
             switch ($adapterType) {
                 case 'memcached':
-                    $baseAdapter = self::createMemcachedAdapter();
+                    $baseAdapter = self::createMemcachedAdapter($config);
                     self::$instance = new TagAwareAdapter($baseAdapter);
                     break;
                 case 'redis':
-                    $baseAdapter = self::createRedisAdapter();
+                    $baseAdapter = self::createRedisAdapter($config);
                     self::$instance = new TagAwareAdapter($baseAdapter);
                     break;
 
                 case 'filesystem':
                 default:
                     self::$instance = new FilesystemTagAwareAdapter(
-                        directory: Functions::getRoot() . "Cache" 
+                        directory: \NeoFramework\Core\Support\ProjectRoot::path() . "Cache"
                     );
                     break;
             }
@@ -47,22 +45,22 @@ final class Cache {
         return self::$instance;
     }
 
-    private static function createMemcachedAdapter(): MemcachedAdapter
+    private static function createMemcachedAdapter(CacheConfig $config): MemcachedAdapter
     {
-        if (!env("MEMCACHED_HOST") || !env("MEMCACHED_PORT")) {
-            throw new Exception("MEMCACHED_HOST or MEMCACHED_PORT not found in the .env file. Please configure Memcached.");
+        if ($config->memcachedHost === '') {
+            throw new Exception("cache.memcached.host must be configured for the memcached adapter.");
         }
 
         try {
-            $user = (string) env("MEMCACHED_USER");
-            $pass = (string) env("MEMCACHED_PASSWORD");
+            $user = $config->memcachedUser;
+            $pass = $config->memcachedPassword;
 
             $credentials = ($user !== "" || $pass !== "")
                 ? rawurlencode($user) . ":" . rawurlencode($pass) . "@"
                 : "";
 
             $client = MemcachedAdapter::createConnection(
-                "memcached://".$credentials.env("MEMCACHED_HOST").":".env("MEMCACHED_PORT")
+                "memcached://" . $credentials . $config->memcachedHost . ":" . $config->memcachedPort
             );
             return new MemcachedAdapter($client);
         } catch (\Exception $e) {
@@ -70,21 +68,21 @@ final class Cache {
         }
     }
 
-    private static function createRedisAdapter(): RedisAdapter
+    private static function createRedisAdapter(CacheConfig $config): RedisAdapter
     {
-        if (!env("REDIS_HOST") || !env("REDIS_PORT")) {
-            throw new Exception("REDIS_HOST or REDIS_PORT not found in the .env file. Please configure Redis.");
+        if ($config->redisHost === '') {
+            throw new Exception("cache.redis.host must be configured for the redis adapter.");
         }
 
         try {
-            $password = (string) env("REDIS_PASSWORD");
+            $password = $config->redisPassword;
 
             // A senha precisa vir depois de ":" — sem os dois-pontos o Symfony
             // interpreta o valor como nome de usuário e a autenticação falha.
             $credentials = $password !== "" ? ":" . rawurlencode($password) . "@" : "";
 
             $client = RedisAdapter::createConnection(
-                "redis://".$credentials.env("REDIS_HOST").":".env("REDIS_PORT")."/0"
+                "redis://" . $credentials . $config->redisHost . ":" . $config->redisPort . "/0"
             );
             return new RedisAdapter($client);
          } catch (\Exception $e) {
@@ -97,6 +95,33 @@ final class Cache {
         return self::load()->$name(...$arguments);
     }
 
+    public function getItem(string $key): CacheItemInterface
+    {
+        $cache = self::load();
+        if (!$cache instanceof CacheItemPoolInterface) throw new \LogicException('Configured cache does not expose PSR-6 items.');
+        $item = $cache->getItem($key);
+
+        // Aqui é o único ponto onde acerto e erro são distinguíveis: quem chama
+        // recebe o item e decide sozinho o que fazer com `isHit()`.
+        \NeoFramework\Core\Events\Events::dispatch(new \NeoFramework\Core\Events\CacheAccessed($item->isHit()));
+
+        return $item;
+    }
+
+    public function save(CacheItemInterface $item): bool
+    {
+        $cache = self::load();
+        if (!$cache instanceof CacheItemPoolInterface) throw new \LogicException('Configured cache does not expose PSR-6 items.');
+        return $cache->save($item);
+    }
+
+    public function deleteItem(string $key): bool
+    {
+        $cache = self::load();
+        if (!$cache instanceof CacheItemPoolInterface) throw new \LogicException('Configured cache does not expose PSR-6 items.');
+        return $cache->deleteItem($key);
+    }
+
     public static function __callStatic($name, $arguments): mixed
     {
         return self::load()->$name(...$arguments);
@@ -105,5 +130,17 @@ final class Cache {
     public static function reset(): void
     {
         self::$instance = null;
+    }
+
+    /**
+     * Instala um pool no lugar do configurado.
+     *
+     * Um teste que precisa de cache não deveria escrever em `Cache/` nem exigir
+     * Redis: o primeiro deixa resto entre execuções, o segundo torna a suíte
+     * dependente de serviço externo. `null` devolve o comportamento normal.
+     */
+    public static function swap(?TagAwareCacheInterface $cache): void
+    {
+        self::$instance = $cache;
     }
 }

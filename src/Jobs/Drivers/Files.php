@@ -1,12 +1,15 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core\Jobs\Drivers;
 
-use Exception;
 use DateTime;
+use Exception;
+use FilesystemIterator;
+use NeoFramework\Core\Config;
+use NeoFramework\Core\Config\QueueConfig;
 use NeoFramework\Core\Jobs\Entity\JobEntity;
 use NeoFramework\Core\Jobs\Interfaces\Client;
-use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
@@ -22,7 +25,8 @@ class Files implements Client
      */
     public function __construct(array $config = [])
     {
-        $this->storagePath = $config['path'] ?? env("JOBS_STORAGE_PATH") ?? sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'neoframework_jobs';
+        $defaults = QueueConfig::from(Config::repository());
+        $this->storagePath = $config['path'] ?? $defaults->filesPath;
         $this->defaultJobTTL = $config['defaultJobTTL'] ?? $this->defaultJobTTL;
         $this->lockTTL = $config['lockTTL'] ?? $this->lockTTL;
 
@@ -117,7 +121,6 @@ class Files implements Client
     {
         return $this->storagePath . DIRECTORY_SEPARATOR . 'failed' . DIRECTORY_SEPARATOR . $queue;
     }
-
 
     /**
      * Generates a unique filename for a job in a queue.
@@ -234,7 +237,7 @@ class Files implements Client
                     $filename = $fileinfo->getFilename();
                     $parts = explode('_', $filename, 2);
                     if (count($parts) === 2 && is_numeric($parts[0])) {
-                        $timestamp = (float)$parts[0];
+                        $timestamp = (float) $parts[0];
                          if ($timestamp < $oldestTimestamp) {
                             $oldestTimestamp = $timestamp;
                             $oldestFile = $fileinfo->getPathname();
@@ -296,7 +299,7 @@ class Files implements Client
                 $filename = $fileinfo->getFilename();
                 $parts = explode('_', $filename, 2);
                 // Check if filename conforms and time is due
-                if (count($parts) === 2 && is_numeric($parts[0]) && (float)$parts[0] <= $now) {
+                if (count($parts) === 2 && is_numeric($parts[0]) && (float) $parts[0] <= $now) {
                     $sourcePath = $fileinfo->getPathname();
                     // Use original job ID and current time for the new filename in the main queue
                     $jobJson = file_get_contents($sourcePath);
@@ -346,7 +349,7 @@ class Files implements Client
                     $filename = $fileinfo->getFilename();
                     $parts = explode('_', $filename, 2);
                      // Check if filename conforms and time is due
-                    if (count($parts) === 2 && is_numeric($parts[0]) && (float)$parts[0] <= $now) {
+                    if (count($parts) === 2 && is_numeric($parts[0]) && (float) $parts[0] <= $now) {
                         $jobJson = file_get_contents($fileinfo->getPathname());
                         if ($jobJson) {
                             $jobs[] = JobEntity::fromJson($jobJson);
@@ -368,7 +371,6 @@ class Files implements Client
 
         return $jobs;
     }
-
 
     /**
      * Returns the queue size.

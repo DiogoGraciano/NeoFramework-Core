@@ -1,19 +1,19 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core\Commands\Queue;
 
 use Ahc\Cli\Input\Command;
 use Ahc\Cli\Output\Color;
-use Ahc\Cli\Output\Writer;
 use Exception;
 use NeoFramework\Core\Jobs\QueueManager;
 
 class Show extends Command
 {
     public function __construct()
-    {   
+    {
         parent::__construct("queue:show","Show all of the jobs from the specified queue");
-        
+
         $this->version("1.0")->arguments('[queue]')->arguments('[limit]');
     }
 
@@ -30,10 +30,10 @@ class Show extends Command
 
         try{
             $jobs = QueueManager::getInstance()->getClient()->getJobs($queue,$limit);
-            print_r($color->info(json_encode($jobs).PHP_EOL));
+            print_r($color->info(json_encode($jobs) . PHP_EOL));
         }
         catch(Exception $e){
-            echo $color->error($e->getMessage().PHP_EOL.$e->getTraceAsString());
+            echo $color->error($e->getMessage() . PHP_EOL . $e->getTraceAsString());
         }
     }
 }

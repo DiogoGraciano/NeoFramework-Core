@@ -1,6 +1,8 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core\Jobs\Interfaces;
+
 use NeoFramework\Core\Jobs\Entity\JobEntity;
 
 interface Client

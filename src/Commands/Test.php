@@ -1,10 +1,10 @@
 <?php
+declare(strict_types=1);
 
 namespace NeoFramework\Core\Commands;
 
 use Ahc\Cli\Helper\Shell;
 use Ahc\Cli\Input\Command;
-use NeoFramework\Core\Functions;
 
 class Test extends Command
 {
@@ -17,7 +17,7 @@ class Test extends Command
 
     public function execute(array $args): void
     {
-        $phpunitPath = Functions::getRoot() . 'vendor/bin/phpunit';
+        $phpunitPath = \NeoFramework\Core\Support\ProjectRoot::path() . 'vendor/bin/phpunit';
         $command = escapeshellcmd($phpunitPath) . ' ' . implode(' ', array_map('escapeshellarg', $args));
 
         $shell = new Shell($command);

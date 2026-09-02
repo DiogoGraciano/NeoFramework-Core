@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 /**
  * A engine de template resolve modifiers ({var|funcao!arg}) em app\helpers\Functions,
