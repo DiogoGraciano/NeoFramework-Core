@@ -100,14 +100,18 @@ final class ConfigRepository implements ConfigRepositoryInterface
     /** @return array<string,mixed> */
     private function loadFiles(): array
     {
+        // Os defaults do framework valem sempre, mesmo sem diretório Config/
+        // no projeto: um clone fresco não tem o diretório (o git não versiona
+        // diretório vazio) e sem isso políticas padrão como `login` somem.
+        $config = Defaults::all();
+
         $directory = rtrim($this->root, '/\\') . DIRECTORY_SEPARATOR . 'Config';
         if (!is_dir($directory)) {
-            return [];
+            return $config;
         }
 
         $files = glob($directory . DIRECTORY_SEPARATOR . '*.php') ?: [];
         sort($files, SORT_STRING);
-        $config = Defaults::all();
 
         foreach ($files as $file) {
             if (basename($file) === 'schema.php') {
