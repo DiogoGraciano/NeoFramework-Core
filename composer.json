@@ -80,7 +80,7 @@
         "phpunit/phpunit": "^12.5.8",
         "phpstan/phpstan": "^2.1",
         "league/flysystem-aws-s3-v3": "^3.29",
-        "friendsofphp/php-cs-fixer": "^3.76",
+        "friendsofphp/php-cs-fixer": "^3.80",
         "spiral/roadrunner-http": "^4.0",
         "spiral/roadrunner-cli": "^2.6",
         "infection/infection": "^0.35.3",
