@@ -5,12 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Mantém também as actions JavaScript no runtime atual. `setup-node` controla o
-# Node disponível para o build; esta variável controla o Node usado pelas
-# próprias actions, como configure-pages e deploy-pages.
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 permissions:
   contents: read
   pages: write
@@ -25,14 +19,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Pages
         id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
+        with:
+          # Cria o site do Pages (fonte: GitHub Actions) automaticamente
+          # na primeira execução, em vez de falhar com "Get Pages site failed".
+          enablement: true
 
       - name: Configurar Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -44,7 +42,7 @@ jobs:
         run: npm run docs:build
 
       - name: Publicar artefato
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: docs/.vitepress/dist
 
@@ -57,4 +55,4 @@ jobs:
     steps:
       - name: Publicar no GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

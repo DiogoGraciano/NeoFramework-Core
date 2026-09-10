@@ -72,11 +72,11 @@ jobs:
           --health-retries 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: NeoFramework-Core
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: DiogoGraciano/NeoORM
           path: NeoORM
@@ -155,11 +155,11 @@ jobs:
         working-directory: NeoFramework-Core
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: NeoFramework-Core
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: DiogoGraciano/NeoORM
           path: NeoORM
